@@ -74,7 +74,7 @@
     "vnetID": "[resourceId(parameters('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
     "subnet1Ref": "[concat(variables('vnetID'),'/subnets/', parameters('subnet1Name'))]",
     "templateLocation": "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/master/",
-    "masterHostName": "[concat('nfs', parameters('uniquePrefix'), 'vm')]" },
+    "masterHostName": "[concat('nfs', parameters('uniquePrefix'), 'vm')]",
     "uploadTemplateUri": "[concat(variables('templateLocation'), 'upload.json')]",
 
     "downloadTemplateURI": "[concat(variables('templateLocation'), 'download.json')]",
