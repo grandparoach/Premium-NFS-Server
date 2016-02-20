@@ -50,17 +50,14 @@
   "variables": {
     "vnetName": "[concat(parameters('uniquePrefix'), 'vnet')]",
     "subnetName": "subnet",
-    "storageAccountType": "Standard_LRS",
+    "storageAccountType": "Premium_LRS",
     "location": "[resourceGroup().location]",
     "ImagePublisher": "OpenLogic",
     "ImageOffer": "CentOS",
     "OSVersion": "7.1",
-    "imagePieces": "[split(parameters('imageLocation'),'/')]",
-    "blobName": "[variables('imagePieces')[sub(length(variables('imagePieces')),1)]]",
 
-    "templateLocation": "https://raw.githubusercontent.com/grandparoach/Azure-NFS-Server/master/",
+    "templateLocation": "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/master/",
 
-    "sharedResourcesTemplateUri ": "[concat(variables('templateLocation'), 'shared-resources.json')]",
     "uploadTemplateUri": "[concat(variables('templateLocation'), 'upload.json')]",
 
     "downloadTemplateURI": "[concat(variables('templateLocation'), 'download.json')]",
@@ -70,33 +67,12 @@
   },
   "resources": [
     {
-      "name": "[concat(parameters('uniquePrefix'), 'base')]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2015-01-01",
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[variables('sharedResourcesTemplateUri ')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "uniquePrefix": { "value": "[parameters('uniquePrefix')]" },
-          "numberOfSAs": { "value": "[parameters('numberOfSAs')]" },
-          "vnetName": { "value": "[variables('vnetName')]" },
-          "addressPrefix": { "value": "[variables('addressPrefix')]" },
-          "subnetName": { "value": "[variables('subnetName')]" },
-          "subnetPrefix": { "value": "[variables('subnetPrefix')]" },
-          "location": { "value": "[variables('location')]" }
-        }
-      }
-    },
-    {
       "type": "Microsoft.Storage/storageAccounts",
-      "name": "[concat('transfer', parameters('uniquePrefix'), 'sa')]",
+      "name": "[concat('nfs', parameters('uniquePrefix'), 'sa')]",
       "apiVersion": "2015-05-01-preview",
       "location": "[variables('location')]",
       "properties": {
-        "accountType": "Standard_LRS"
+        "accountType": "Premium_LRS"
       }
     },
     {
