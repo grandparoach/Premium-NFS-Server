@@ -74,11 +74,11 @@
     "vnetID": "[resourceId(parameters('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
     "subnet1Ref": "[concat(variables('vnetID'),'/subnets/', parameters('subnet1Name'))]",
     "templateLocation": "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/master/",
-
+    "masterHostName": "[concat('nfs', parameters('uniquePrefix'), 'vm')]" },
     "uploadTemplateUri": "[concat(variables('templateLocation'), 'upload.json')]",
 
     "downloadTemplateURI": "[concat(variables('templateLocation'), 'download.json')]",
-    "downloadScriptURI": "[concat(variables('templateLocation'), 'download.sh')]",
+    "setupScriptURI": "[concat(variables('templateLocation'), 'setup.sh')]",
     "uploadTemplateURI": "[concat(variables('templateLocation'), 'upload.json')]",
     "uploadScriptURI": "[concat(variables('templateLocation'), 'upload.sh')]"
   },
@@ -131,17 +131,20 @@
       "name": "[concat('transfer', parameters('uniquePrefix'), 'vm/ext')]",
       "apiVersion": "2015-05-01-preview",
       "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/nfs', parameters('uniquePrefix'), 'vm')]"
+      ],
       "properties": {
         "publisher": "Microsoft.OSTCExtensions",
         "type": "CustomScriptForLinux",
         "typeHandlerVersion": "1.4",
         "settings": {
           "fileUris": [
-            "[parameters('downloadScriptURI')]"
+            "[parameters('setupScriptURI')]"
           ]
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('bash download.sh ', parameters('imageLocation'),' ', parameters('storageAccountKey'),' ', parameters('masterHostName'),' ', parameters('hpcUserName'))]"
+          "commandToExecute": "[concat('bash setup.sh ',' ', variables('masterHostName'),' ', parameters('hpcUserName'))]"
         }
       }
     },
