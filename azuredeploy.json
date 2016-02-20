@@ -126,28 +126,7 @@
         ]
       }
     },
-    {
-      "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat('transfer', parameters('uniquePrefix'), 'vm/ext')]",
-      "apiVersion": "2015-05-01-preview",
-      "location": "[parameters('location')]",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/nfs', parameters('uniquePrefix'), 'vm')]"
-      ],
-      "properties": {
-        "publisher": "Microsoft.OSTCExtensions",
-        "type": "CustomScriptForLinux",
-        "typeHandlerVersion": "1.4",
-        "settings": {
-          "fileUris": [
-            "[parameters('setupScriptURI')]"
-          ]
-        },
-        "protectedSettings": {
-          "commandToExecute": "[concat('bash setup.sh ',' ', variables('masterHostName'),' ', parameters('hpcUserName'))]"
-        }
-      }
-    },
+ 
 
     {
       "apiVersion": "2015-06-15",
@@ -357,7 +336,29 @@
             "enabled": "true",
             "storageUri": "https://sroachpocstorage.blob.core.windows.net/"
           }
+        },
+   {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat('transfer', parameters('uniquePrefix'), 'vm/ext')]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/nfs', parameters('uniquePrefix'), 'vm')]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.OSTCExtensions",
+        "type": "CustomScriptForLinux",
+        "typeHandlerVersion": "1.4",
+        "settings": {
+          "fileUris": [
+            "[parameters('setupScriptURI')]"
+          ]
+        },
+        "protectedSettings": {
+          "commandToExecute": "[concat('bash setup.sh ',' ', variables('masterHostName'),' ', parameters('hpcUserName'))]"
         }
+      }
+    }
       }
     }
   ]
