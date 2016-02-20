@@ -81,7 +81,7 @@
     "setupScriptURI": "[concat(variables('templateLocation'), 'setup.sh')]",
     "uploadTemplateURI": "[concat(variables('templateLocation'), 'upload.json')]",
     "uploadScriptURI": "[concat(variables('templateLocation'), 'upload.sh')]"
-  }
+  } 
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
