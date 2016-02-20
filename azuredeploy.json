@@ -5,10 +5,37 @@
     "uniquePrefix": {
       "type": "string",
       "metadata": {
-        "description": "This unique prefix will be used on all the objects created as part of this template."
+        "description": "This unique prefix will be used on all the objects created as part of this template. Must be all lower case."
       }
     },
-    "ServerVMSize": {
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the name of the existing VNet."
+      }
+    },
+    "virtualNetworkResourceGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the name of the Resource Group which contains the VNet."
+      }
+    },
+    "subnet1Name": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the name of the subnet to use for the NFS server."
+      }
+    },
+   
+   
+  },
+  
+ 
+
+
+
+    
+    "VMSize": {
       "type": "string",
       "defaultValue": "Standard_DS4",
       "allowedValues": [
@@ -48,14 +75,13 @@
     }
   },
   "variables": {
-    "vnetName": "[concat(parameters('uniquePrefix'), 'vnet')]",
-    "subnetName": "subnet",
     "storageAccountType": "Premium_LRS",
     "location": "[resourceGroup().location]",
     "ImagePublisher": "OpenLogic",
     "ImageOffer": "CentOS",
     "OSVersion": "7.1",
-
+    "vnetID": "[resourceId(parameters('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "subnet1Ref": "[concat(variables('vnetID'),'/subnets/', parameters('subnet1Name'))]",
     "templateLocation": "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/master/",
 
     "uploadTemplateUri": "[concat(variables('templateLocation'), 'upload.json')]",
@@ -78,7 +104,7 @@
     {
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[concat('transfer', parameters('uniquePrefix'), 'ip')]",
+      "name": "[concat('nfs', parameters('uniquePrefix'), 'ip')]",
       "location": "[variables('location')]",
       "properties": {
         "publicIPAllocationMethod": "Dynamic"
@@ -87,11 +113,10 @@
     {
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/networkInterfaces",
-      "name": "[concat('transfer', parameters('uniquePrefix'), 'nic')]",
+      "name": "[concat('nfs', parameters('uniquePrefix'), 'nic')]",
       "location": "[variables('location')]",
       "dependsOn": [
-        "[concat('Microsoft.Network/publicIPAddresses/transfer', parameters('uniquePrefix'), 'ip')]",
-        "[concat('Microsoft.Resources/deployments/', parameters('uniquePrefix'), 'base')]"
+        "[concat('Microsoft.Network/publicIPAddresses/nfs', parameters('uniquePrefix'), 'ip')]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -100,10 +125,10 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat('transfer', parameters('uniquePrefix'), 'ip'))]"
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat('nfs', parameters('uniquePrefix'), 'ip'))]"
               },
               "subnet": {
-                "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/virtualNetworks/', variables('vnetName'), '/subnets/', variables('subnetName'))]"
+                "id": "[variables('subnet1Ref')]"
               }
             }
           }
@@ -113,32 +138,32 @@
     {
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Compute/virtualMachines",
-      "name": "[concat('transfer', parameters('uniquePrefix'), 'vm')]",
+      "name": "[concat('nfs', parameters('uniquePrefix'), 'vm')]",
       "location": "[variables('location')]",
       "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/transfer', parameters('uniquePrefix'), 'sa')]",
-        "[concat('Microsoft.Network/networkInterfaces/transfer', parameters('uniquePrefix'), 'nic')]"
+        "[concat('Microsoft.Storage/storageAccounts/nfs', parameters('uniquePrefix'), 'sa')]",
+        "[concat('Microsoft.Network/networkInterfaces/nfs', parameters('uniquePrefix'), 'nic')]"
       ],
       "properties": {
         "hardwareProfile": {
-          "vmSize": "[parameters('transferVMSize')]"
+          "vmSize": "[parameters('VMSize')]"
         },
         "osProfile": {
-          "computername": "[concat('transfer', parameters('uniquePrefix'), 'vm')]",
+          "computername": "[concat('nfs', parameters('uniquePrefix'), 'vm')]",
           "adminUsername": "[parameters('adminUsername')]",
           "adminPassword": "[parameters('adminPassword')]"
         },
         "storageProfile": {
           "imageReference": {
-            "publisher": "[variables('transferImagePublisher')]",
-            "offer": "[variables('transferImageOffer')]",
-            "sku": "[variables('transferOSVersion')]",
+            "publisher": "[variables('ImagePublisher')]",
+            "offer": "[variables('ImageOffer')]",
+            "sku": "[variables('OSVersion')]",
             "version": "latest"
           },
           "osDisk": {
             "name": "osdisk",
             "vhd": {
-              "uri": "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/transfervm.vhd')]"
+              "uri": "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/nfsvm.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"
@@ -149,7 +174,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 0, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk0.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk0.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -159,7 +184,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 1, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk1.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk1.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -169,7 +194,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 2, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk2.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk2.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -179,7 +204,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 3, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk3.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk3.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -189,7 +214,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 4, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk4.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk4.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -199,7 +224,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 5, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk5.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk5.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -209,7 +234,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 6, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk6.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk6.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -219,7 +244,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 7, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk7.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk7.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -229,7 +254,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 8, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk8.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk8.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -239,7 +264,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 9, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk9.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk9.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -249,7 +274,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 10, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk10.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk10.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -259,7 +284,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 11, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk11.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk11.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -269,7 +294,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 12, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk12.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk12.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -279,7 +304,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 13, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk13.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk13.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -289,7 +314,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 14, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk14.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk14.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -299,7 +324,7 @@
             "diskSizeGB": "[parameters('dataDiskSize')]", 
             "lun": 15, 
             "vhd": { 
-              "Uri":  "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net/transfervm/datadisk15.vhd')]" 
+              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk15.vhd')]" 
               }, 
             "caching": "ReadWrite", 
             "createOption": "Empty" 
@@ -309,64 +334,15 @@
         "networkProfile": {
           "networkInterfaces": [
             {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat('transfer', parameters('uniquePrefix'), 'nic'))]"
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat('nfs', parameters('uniquePrefix'), 'nic'))]"
             }
           ]
         },
         "diagnosticsProfile": {
           "bootDiagnostics": {
             "enabled": "true",
-            "storageUri": "[concat('http://transfer',parameters('uniquePrefix'),'sa.blob.core.windows.net')]"
+            "storageUri": "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net')]"
           }
-        }
-      }
-    },
-    {
-      "name": "[concat(parameters('uniquePrefix'), 'script0')]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2015-01-01",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/transfer', parameters('uniquePrefix'), 'vm')]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[variables('downloadTemplateURI')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "location": { "value": "[variables('location')]" },
-          "uniquePrefix": { "value": "[parameters('uniquePrefix')]" },
-          "imageLocation": { "value": "[parameters('imageLocation')]" },
-          "masterHostName": { "value": "[concat('transfer', parameters('uniquePrefix'), 'vm')]" },
-          "hpcUserName": { "value": "[parameters('hpcUserName')]" },
-          "storageAccountKey": { "value": "[parameters('storageAccountKey')]" },
-          "downloadScriptURI": { "value": "[variables('downloadScriptURI')]" }
-        }
-      }
-    },
-    {
-      "name": "[concat(parameters('uniquePrefix'), 'script', string(add(copyIndex(), 1)))]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2015-01-01",
-      "dependsOn": [
-        "[concat('Microsoft.Resources/deployments/', parameters('uniquePrefix'), 'script', copyIndex())]"
-      ],
-      "copy": {
-        "name": "uploadLoop",
-        "count": "[parameters('numberOfSAs')]"
-      },
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[variables('uploadTemplateURI')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "location": { "value": "[variables('location')]" },
-          "uniquePrefix": { "value": "[parameters('uniquePrefix')]" },
-          "index": { "value": "[copyIndex()]" },
-          "uploadScriptURI": { "value": "[variables('uploadScriptURI')]" }
         }
       }
     }
