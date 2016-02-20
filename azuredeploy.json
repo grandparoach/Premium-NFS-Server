@@ -8,35 +8,16 @@
         "description": "This unique prefix will be used on all the objects created as part of this template."
       }
     },
-    "transferVMSize": {
+    "ServerVMSize": {
       "type": "string",
-      "defaultValue": "Standard_D4",
+      "defaultValue": "Standard_DS4",
       "allowedValues": [
-        "Standard_A4",
-        "Standard_A7",
-        "Standard_D4",
-        "Standard_D14"
+        "Standard_DS4",
+        "Standard_DS13",
+        "Standard_DS14"
       ],
       "metadata": {
-        "description": "Size of the VM used to transfer the VM image to various storage acounts."
-      }
-    },
-    "numberOfSAs": {
-      "type": "int",
-      "metadata": {
-        "description": "Number of Storage Accounts to upload the custom image to."
-      }
-    },
-    "imageLocation": {
-      "type": "string",
-      "metadata": {
-        "description": "URL of the base custom image, in the format of https://accountname.blob.core.windows.net/container/image.vhd."
-      }
-    },
-    "storageAccountKey": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Storage Account key for accessing the base custom image."
+        "description": "Size of the VM used to for the NFS Server."
       }
     },
     "adminUsername": {
@@ -68,14 +49,12 @@
   },
   "variables": {
     "vnetName": "[concat(parameters('uniquePrefix'), 'vnet')]",
-    "addressPrefix": "10.0.0.0/16",
     "subnetName": "subnet",
-    "subnetPrefix": "10.0.0.0/21",
     "storageAccountType": "Standard_LRS",
     "location": "[resourceGroup().location]",
-    "transferImagePublisher": "OpenLogic",
-    "transferImageOffer": "CentOS",
-    "transferOSVersion": "7.1",
+    "ImagePublisher": "OpenLogic",
+    "ImageOffer": "CentOS",
+    "OSVersion": "7.1",
     "imagePieces": "[split(parameters('imageLocation'),'/')]",
     "blobName": "[variables('imagePieces')[sub(length(variables('imagePieces')),1)]]",
 
