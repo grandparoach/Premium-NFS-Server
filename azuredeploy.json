@@ -337,7 +337,8 @@
             "storageUri": "https://sroachpocstorage.blob.core.windows.net/"
           }
         }
-      },  
+      }
+    },  
    {
       "type": "Microsoft.Compute/virtualMachines/extensions",
       "name": "[concat('transfer', parameters('uniquePrefix'), 'vm/ext')]",
@@ -358,7 +359,6 @@
         "protectedSettings": {
           "commandToExecute": "[concat('bash setup.sh ',' ', variables('masterHostName'),' ', parameters('hpcUserName'))]"
         }
-      }
       }
     }
   ]
