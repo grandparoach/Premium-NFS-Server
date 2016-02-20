@@ -353,7 +353,7 @@
         "typeHandlerVersion": "1.4",
         "settings": {
           "fileUris": [
-            "[parameters('setupScriptURI')]"
+            "[variables('setupScriptURI')]"
           ]
         },
         "protectedSettings": {
