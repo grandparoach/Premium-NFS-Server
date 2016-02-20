@@ -332,7 +332,7 @@
         "diagnosticsProfile": {
           "bootDiagnostics": {
             "enabled": "true",
-            "storageUri": "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net')]"
+            "storageUri": "https://sroachpocstorage.blob.core.windows.net/"
           }
         }
       }
