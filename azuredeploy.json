@@ -26,15 +26,6 @@
         "description": "This is the name of the subnet to use for the NFS server."
       }
     },
-   
-   
-  },
-  
- 
-
-
-
-    
     "VMSize": {
       "type": "string",
       "defaultValue": "Standard_DS4",
