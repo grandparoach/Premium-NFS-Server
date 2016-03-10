@@ -325,12 +325,6 @@
               "id": "[resourceId('Microsoft.Network/networkInterfaces', concat('nfs', parameters('uniquePrefix'), 'nic'))]"
             }
           ]
-        },
-        "diagnosticsProfile": {
-          "bootDiagnostics": {
-            "enabled": "true",
-            "storageUri": "https://sroachpocstorage.blob.core.windows.net/"
-          }
         }
       }
     },  
