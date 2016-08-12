@@ -84,10 +84,11 @@ setup_shares()
         echo "$SHARE_HOME    *(rw,async)" >> /etc/exports
         echo "$SHARE_DATA    *(rw,async)" >> /etc/exports
 
-        systemctl enable rpcbind || echo "Already enabled"
-        systemctl enable nfs-server || echo "Already enabled"
-        systemctl start rpcbind || echo "Already enabled"
-        systemctl start nfs-server || echo "Already enabled"
+        # systemctl enable rpcbind || echo "Already enabled"
+        # systemctl enable nfs-server || echo "Already enabled"
+        # systemctl start rpcbind || echo "Already enabled"
+        # systemctl start nfs-server || echo "Already enabled"
+        service nfs start
     else
         echo "master:$SHARE_HOME $SHARE_HOME    nfs4    rw,auto,_netdev 0 0" >> /etc/fstab
         echo "master:$SHARE_DATA $SHARE_DATA    nfs4    rw,auto,_netdev 0 0" >> /etc/fstab
