@@ -192,9 +192,9 @@
     
     "mastervmScripts": {
       "scriptsToDownload": [
-        "https://raw.githubusercontent.com/grandparoach/simpleMPIPOC/NOAA/master-setup.sh"
+        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/master/setup.sh"
       ],
-      "commandToExecute": "bash master-setup.sh"
+      "commandToExecute": "bash setup.sh"
     }
   },  
   "resources": [
