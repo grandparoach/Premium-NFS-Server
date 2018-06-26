@@ -1,6 +1,5 @@
 # Premium-NFS-Server
 Template for Deploying an NFS Server with Premium Storage and Accelerated Networking.
-This template will attach up to 16 drives and create a RAID 0 stripe, then export it for sharing via NFS
 
 You must specify an existing VNet/Subnet for it to attach to.
 You can specify with an input parameter whther you want a Public IP address assigned to the machine.
