@@ -1,355 +1,316 @@
 {
-  "$schema": "http://schema.management.azure.com/schemas/2015-01-01-preview/deploymentTemplate.json",
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "uniquePrefix": {
+    "vmPrefix": {
       "type": "string",
       "metadata": {
-        "description": "This unique prefix will be used on all the objects created as part of this template. Must be all lower case."
-      }
+        "description": "Base string for naming resources (max length of 8)"
+      },
+      "maxLength": 8
     },
-    "virtualNetworkName": {
+    "MasterVMsku": {
       "type": "string",
-      "metadata": {
-        "description": "This is the name of the existing VNet."
-      }
-    },
-    "virtualNetworkResourceGroup": {
-      "type": "string",
-      "metadata": {
-        "description": "This is the name of the Resource Group which contains the VNet."
-      }
-    },
-    "subnet1Name": {
-      "type": "string",
-      "metadata": {
-        "description": "This is the name of the subnet to use for the NFS server."
-      }
-    },
-    "VMSize": {
-      "type": "string",
-      "defaultValue": "Standard_DS4",
+      "defaultValue": "Standard_F16s_v2",
       "allowedValues": [
-        "Standard_DS4",
-        "Standard_DS13",
-        "Standard_DS14"
+        "Standard_DS3_v2",
+        "Standard_DS4_v2",
+        "Standard_DS5_v2",
+        "Standard_DS11_v2",
+        "Standard_DS12_v2",
+        "Standard_DS13_v2",
+        "Standard_DS14_v2",
+        "Standard_DS15_v2",
+        "Standard_F8s_v2",
+        "Standard_D8s_v3",
+        "Standard_D16s_v3",
+        "Standard_D32s_v3",
+        "Standard_D64s_v3",
+        "Standard_F16s_v2",
+        "Standard_F32s_v2",
+        "Standard_F64s_v2"
       ],
       "metadata": {
-        "description": "Size of the VM used to for the NFS Server."
+        "description": "sku to use for the master VM"
       }
     },
-    "adminUsername": {
+    "masterImage": {
+      "type": "string",
+      "defaultValue": "CentOS_7.4",
+      "allowedValues": [
+        "CentOS_7.4",
+        "RHEL_7.4"
+      ],
+      "metadata": {
+        "description": "The VM image of the master nodes"
+      }
+    },
+    "adminUserName": {
       "type": "string",
       "metadata": {
-        "description": "Admin username for the VMs in the deployment."
+        "description": "User name for the Virtual Machine."
+      }
+    },
+    "authenticationType": {
+      "type": "string",
+      "defaultValue": "password",
+      "allowedValues": [
+        "password",
+        "sshPublicKey"
+      ],
+      "metadata": {
+        "description": "Authentication type for the virtual machines"
       }
     },
     "adminPassword": {
       "type": "securestring",
+      "defaultValue": " ",
       "metadata": {
-        "description": "Admin password for the VMs in the deployment."
+        "description": "Admin password for the virtual machines"
       }
     },
-    "hpcUserName": {
+    "sshPublicKey": {
       "type": "string",
-      "defaultValue": "hpc",
+      "defaultValue": "",
       "metadata": {
-        "description": "User for running HPC applications with shared home directory and SSH public key authentication setup.  This user cannot login from outside the cluster. Pick a valid username otherwise there will be a BadRequest error."
+        "description": "SSH public key that will be included on all nodes. The OpenSSH public key can be generated with tools like ssh-keygen on Linux or OS X."
       }
     },
     "dataDiskSize": {
       "type": "int",
       "defaultValue": 128,
       "metadata": {
-        "description": "The size in GB of each data disk that is attached to the VM.  A RAID-0 volume is created with all data disks that is dataDiskSize * dataDiskCount in size."
+        "description": "The size in GB of each of the data disks that are attached to the VM.  A RAID-0 volume is created with all data disks that is dataDiskSize * dataDiskCount in size."
       }
+    },
+    "nbDataDisks": {
+      "type": "int",
+      "defaultValue": 8,
+      "maxValue": 16,
+      "metadata": {
+        "description": "The number of disks to attach to the NFS server."
+      }
+    },
+    "existingVNetName": {
+      "type": "string",
+      "defaultValue": "westus2VNet",
+      "metadata": {
+        "description": "name of existing Virtual Network"
+      }
+    },
+    "existingVNetResourceGroup": {
+      "type": "string",
+       "defaultValue": "westus2",
+      "metadata": {
+        "description": "name of Resource Group for existing Virtual Network"
+      }
+    },
+    "existingSubnetName": {
+      "type": "string",
+      "defaultValue": "default",
+      "metadata": {
+        "description": "name of existing Virtual Network"
+      }
+    },
+    "allowPublicIP": {
+        "type": "string",
+        "defaultValue": "yes",
+        "allowedValues": [
+            "yes",
+            "no"
+          ],
+        "metadata": {
+          "description": "Allow a Public IP address for this machine?"
+        }
     }
   },
   "variables": {
-    "storageAccountType": "Premium_LRS",
     "location": "[resourceGroup().location]",
-    "ImagePublisher": "OpenLogic",
-    "ImageOffer": "CentOS",
-    "OSVersion": "7.1",
-    "vnetID": "[resourceId(parameters('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
-    "subnet1Ref": "[concat(variables('vnetID'),'/subnets/', parameters('subnet1Name'))]",
-    "templateLocation": "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/master/",
-    "masterHostName": "[concat('nfs', parameters('uniquePrefix'), 'vm')]",
-    "setupScriptURI": "[concat(variables('templateLocation'), 'setup.sh')]"
-  },
+    "longNamingInfix": "[toLower(parameters('vmPrefix'))]",
+    "newStorageAccountSuffix": "[concat(variables('longNamingInfix'), 'sa')]",
+    "vnetID": "[resourceId(parameters('existingVNetResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('existingVNetName'))]",
+    "SubnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
+    "masterBoxName": "[concat(variables('longNamingInfix'), 'master')]",
+    "DiagSAName": "[concat(uniqueString(concat(resourceGroup().id, variables('newStorageAccountSuffix'), 'masterboxsadiag')), 'diag')]",
+    "MasterIPConfigName": "[concat(variables('masterBoxName'), 'ipconfig')]",
+    "MasterNicName": "[concat(variables('masterBoxName'), 'nic')]",
+    "publicIPAddressName": "[concat(variables('masterBoxName'), 'pip')]",
+    "MasterimageReference": "[variables('computeImages')[parameters('masterImage')]]",
+    "sshKeyPath": "[concat('/home/',parameters('adminUserName'),'/.ssh/authorized_keys')]",
+    "computeImages": {
+      "CentOS_7.4": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "7.4",
+        "version": "latest"
+      },
+      "RHEL_7.4": {
+        "publisher": "RedHat",
+        "offer": "RHEL",
+        "sku": "7.4",
+        "version": "latest"
+      }
+    },
+
+    "NIC_dependsOn_PublicIP_yes": 
+    "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+    "NIC_dependsOn_PublicIP_no": { },
+    "NIC_dependsOn_PublicIP": "[variables(concat('NIC_dependsOn_PublicIP_',parameters('allowPublicIP')))]",
+
+    "NIC_properties_PublicIP_no": {
+        "privateIPAllocationMethod": "Dynamic",
+        "subnet": {
+          "id": "[variables('SubnetRef')]"
+        }
+    },
+    "NIC_properties_PublicIP_yes": {
+        "privateIPAllocationMethod": "Dynamic",
+        "publicIPAddress": {
+            "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+        }, 
+        "subnet": {
+            "id": "[variables('SubnetRef')]"
+        }
+    },
+    "NIC_properties_PublicIP": "[variables(concat('NIC_properties_PublicIP_',parameters('allowPublicIP')))]",
+
+    "linuxConfiguration_sshPublicKey": {
+      "disablePasswordAuthentication": "true",
+      "ssh": {
+        "publicKeys": [
+          {
+            "path": "[variables('sshKeyPath')]",
+            "keyData": "[parameters('sshPublicKey')]"
+          }
+        ]
+      }
+    },
+    "linuxConfiguration_password": { },
+    "linuxConfiguration": "[variables(concat('linuxConfiguration_',parameters('authenticationType')))]",
+    
+    "storageAccountType": "Standard_LRS",
+    
+    "mastervmScripts": {
+      "scriptsToDownload": [
+        "https://raw.githubusercontent.com/grandparoach/simpleMPIPOC/NOAA/master-setup.sh"
+      ],
+      "commandToExecute": "bash master-setup.sh"
+    }
+  },  
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "name": "[concat('nfs', parameters('uniquePrefix'), 'sa')]",
-      "apiVersion": "2015-05-01-preview",
+      "name": "[variables('DiagSAName')]",
       "location": "[variables('location')]",
+      "apiVersion": "2015-06-15",
       "properties": {
-        "accountType": "Premium_LRS"
+        "accountType": "Standard_LRS"
       }
     },
     {
-      "apiVersion": "2015-05-01-preview",
+      "condition": "[equals(parameters('allowPublicIP'),'yes')]",
       "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[concat('nfs', parameters('uniquePrefix'), 'ip')]",
+      "name": "[variables('publicIPAddressName')]",
       "location": "[variables('location')]",
+      "apiVersion": "2017-08-01",
       "properties": {
         "publicIPAllocationMethod": "Dynamic"
       }
     },
     {
-      "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/networkInterfaces",
-      "name": "[concat('nfs', parameters('uniquePrefix'), 'nic')]",
+      "name": "[variables('MasterNicName')]",
       "location": "[variables('location')]",
+      "apiVersion": "2018-04-01",
       "dependsOn": [
-        "[concat('Microsoft.Network/publicIPAddresses/nfs', parameters('uniquePrefix'), 'ip')]"
+        "[variables('NIC_dependsOn_PublicIP')]"
       ],
       "properties": {
         "ipConfigurations": [
           {
-            "name": "ipconfig1",
-            "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat('nfs', parameters('uniquePrefix'), 'ip'))]"
-              },
-              "subnet": {
-                "id": "[variables('subnet1Ref')]"
-              }
-            }
+            "name": "[variables('MasterIPConfigName')]",
+            "properties": "[variables('NIC_properties_PublicIP')]"
           }
-        ]
+        ],
+        "enableAcceleratedNetworking": true
       }
     },
- 
-
     {
-      "apiVersion": "2015-06-15",
       "type": "Microsoft.Compute/virtualMachines",
-      "name": "[concat('nfs', parameters('uniquePrefix'), 'vm')]",
+      "name": "[variables('masterBoxName')]",
       "location": "[variables('location')]",
+      "apiVersion": "2017-03-30",
       "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/nfs', parameters('uniquePrefix'), 'sa')]",
-        "[concat('Microsoft.Network/networkInterfaces/nfs', parameters('uniquePrefix'), 'nic')]"
+        "[concat('Microsoft.Network/networkinterfaces/', variables('MasterNicName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('DiagSAName'))]"
       ],
       "properties": {
         "hardwareProfile": {
-          "vmSize": "[parameters('VMSize')]"
+          "vmSize": "[parameters('MasterVMsku')]"
         },
         "osProfile": {
-          "computername": "[concat('nfs', parameters('uniquePrefix'), 'vm')]",
-          "adminUsername": "[parameters('adminUsername')]",
-          "adminPassword": "[parameters('adminPassword')]"
+          "computerName": "[variables('masterBoxName')]",
+          "adminUsername": "[parameters('adminUserName')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "linuxConfiguration": "[variables('linuxConfiguration')]"
         },
         "storageProfile": {
-          "imageReference": {
-            "publisher": "[variables('ImagePublisher')]",
-            "offer": "[variables('ImageOffer')]",
-            "sku": "[variables('OSVersion')]",
-            "version": "latest"
-          },
+          "imageReference": "[variables('MasterimageReference')]",
           "osDisk": {
-            "name": "osdisk",
-            "vhd": {
-              "uri": "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/nfsvm.vhd')]"
-            },
-            "caching": "ReadWrite",
-            "createOption": "FromImage"
+            "caching": "ReadOnly",
+            "createOption": "FromImage",
+             "managedDisk": {
+                "storageAccountType": "Premium_LRS"
+             }
           },
-          "dataDisks": [ 
-            { 
-            "name": "datadisk0", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 0, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk0.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk1", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 1, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk1.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk2", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 2, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk2.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk3", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 3, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk3.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk4", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 4, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk4.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk5", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 5, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk5.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk6", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 6, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk6.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk7", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 7, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk7.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk8", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 8, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk8.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk9", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 9, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk9.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk10", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 10, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk10.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk11", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 11, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk11.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk12", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 12, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk12.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk13", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 13, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk13.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk14", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 14, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk14.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
-            }, 
-            { 
-            "name": "datadisk15", 
-            "diskSizeGB": "[parameters('dataDiskSize')]", 
-            "lun": 15, 
-            "vhd": { 
-              "Uri":  "[concat('http://nfs',parameters('uniquePrefix'),'sa.blob.core.windows.net/nfsvm/datadisk15.vhd')]" 
-              }, 
-            "caching": "ReadWrite", 
-            "createOption": "Empty" 
+
+          "copy": [{
+            "name": "dataDisks",
+            "count": "[parameters('nbDataDisks')]",
+            "input": {
+                "lun": "[copyIndex('dataDisks')]",
+                "createOption": "Empty",
+                "diskSizeGB": "[parameters('datadiskSize')]"
             }
-          ]
+        }]
+
+         
         },
         "networkProfile": {
           "networkInterfaces": [
             {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat('nfs', parameters('uniquePrefix'), 'nic'))]"
+               "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('MasterNicName'))]"
             }
           ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+           "storageUri": "[concat('http://',variables('DiagSAName'),'.blob.core.windows.net')]"
+          }
         }
       }
-    },  
-   {
+    },     
+    {
       "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat('nfs', parameters('uniquePrefix'), 'vm/ext')]",
-      "apiVersion": "2015-05-01-preview",
-      "location": "[variables('location')]",
+      "name": "[concat(variables('masterBoxName'), '/ext')]",
+      "apiVersion": "2015-06-15",
+      "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/nfs', parameters('uniquePrefix'), 'vm')]"
+        "[concat('Microsoft.Compute/virtualMachines/', variables('masterBoxName'))]"
       ],
       "properties": {
-        "publisher": "Microsoft.OSTCExtensions",
-        "type": "CustomScriptForLinux",
-        "typeHandlerVersion": "1.4",
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.0",
+        "autoUpgradeMinorVersion": true,
         "settings": {
-          "fileUris": [
-            "[variables('setupScriptURI')]"
-          ]
+          "fileUris": "[variables('mastervmScripts').scriptsToDownload]"
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('bash setup.sh ',' ', variables('masterHostName'),' ', parameters('hpcUserName'))]"
+          "commandToExecute": "[variables('mastervmScripts').commandToExecute]"
         }
       }
     }
   ]
 }
-
