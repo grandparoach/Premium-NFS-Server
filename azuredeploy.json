@@ -64,7 +64,7 @@
     },
     "adminPassword": {
       "type": "securestring",
-      "defaultValue": " ",
+      "defaultValue": "",
       "metadata": {
         "description": "Admin password for the virtual machines"
       }
@@ -93,21 +93,21 @@
     },
     "existingVNetName": {
       "type": "string",
-      "defaultValue": "westus2VNet",
+      "defaultValue": "",
       "metadata": {
         "description": "name of existing Virtual Network"
       }
     },
     "existingVNetResourceGroup": {
       "type": "string",
-       "defaultValue": "westus2",
+       "defaultValue": "",
       "metadata": {
         "description": "name of Resource Group for existing Virtual Network"
       }
     },
     "existingSubnetName": {
       "type": "string",
-      "defaultValue": "default",
+      "defaultValue": "",
       "metadata": {
         "description": "name of existing Virtual Network"
       }
