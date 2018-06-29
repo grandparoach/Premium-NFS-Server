@@ -2,7 +2,7 @@
 Template for Deploying an NFS Server with Premium Storage and Accelerated Networking.
 
 You must specify an existing VNet/Subnet for it to attach to.
-You can specify with an input parameter whther you want a Public IP address assigned to the machine.
+This will also assign a PublicIP address to the server.
 
 The DataDiskSize and nbDataDisks parameters refer to the NFS Server.  ndDataDisks of DataDiskSize will be attached to the NFS Server, then they will be formatted and combined into a single RAID 0 volume which will then be exported as the /share/data directory. 
 
