@@ -111,17 +111,6 @@
       "metadata": {
         "description": "name of existing Virtual Network"
       }
-    },
-    "allowPublicIP": {
-        "type": "string",
-        "defaultValue": "yes",
-        "allowedValues": [
-            "yes",
-            "no"
-          ],
-        "metadata": {
-          "description": "Allow a Public IP address for this machine?"
-        }
     }
   },
   "variables": {
@@ -151,29 +140,6 @@
         "version": "latest"
       }
     },
-
-    "NIC_dependsOn_PublicIP_yes": 
-    "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
-    "NIC_dependsOn_PublicIP_no": { },
-    "NIC_dependsOn_PublicIP": "[variables(concat('NIC_dependsOn_PublicIP_',parameters('allowPublicIP')))]",
-
-    "NIC_properties_PublicIP_no": {
-        "privateIPAllocationMethod": "Dynamic",
-        "subnet": {
-          "id": "[variables('SubnetRef')]"
-        }
-    },
-    "NIC_properties_PublicIP_yes": {
-        "privateIPAllocationMethod": "Dynamic",
-        "publicIPAddress": {
-            "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
-        }, 
-        "subnet": {
-            "id": "[variables('SubnetRef')]"
-        }
-    },
-    "NIC_properties_PublicIP": "[variables(concat('NIC_properties_PublicIP_',parameters('allowPublicIP')))]",
-
     "linuxConfiguration_sshPublicKey": {
       "disablePasswordAuthentication": "true",
       "ssh": {
@@ -208,7 +174,6 @@
       }
     },
     {
-      "condition": "[equals(parameters('allowPublicIP'),'yes')]",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddressName')]",
       "location": "[variables('location')]",
@@ -223,13 +188,21 @@
       "location": "[variables('location')]",
       "apiVersion": "2018-04-01",
       "dependsOn": [
-        "[variables('NIC_dependsOn_PublicIP')]"
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
       ],
       "properties": {
         "ipConfigurations": [
           {
             "name": "[variables('MasterIPConfigName')]",
-            "properties": "[variables('NIC_properties_PublicIP')]"
+            "properties":  {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+              }, 
+              "subnet": {
+                  "id": "[variables('SubnetRef')]"
+              }
+            }
           }
         ],
         "enableAcceleratedNetworking": true
