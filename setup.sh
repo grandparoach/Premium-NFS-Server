@@ -67,8 +67,6 @@ setup_raid()
 
 mount_nfs()
 {
-    chown $ADMIN_USER:1000 $NFS_DATA
-    chmod 777 $NFS_DATA
     
     echo "$NFS_DATA    *(rw,async)" >> /etc/exports
     systemctl enable rpcbind || echo "Already enabled"
@@ -79,6 +77,11 @@ mount_nfs()
     exportfs
 	exportfs -a
 	exportfs 
+    
+    cd /share/data
+    chown $ADMIN_USER:1000 .
+    chmod 777 .
+    
 }
 
 systemctl stop firewalld
@@ -91,5 +94,6 @@ setenforce 0
 install_pkgs
 setup_raid
 mount_nfs
+
 
 exit 0
