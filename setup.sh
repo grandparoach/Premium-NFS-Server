@@ -61,8 +61,8 @@ setup_raid()
 	mdadm -C /dev/md0 -l raid0 -n "$DISKCOUNT" "${DISKS[@]}"
 
     #Create File System
-    mkfs -t ext4 /dev/md0
-    echo "/dev/md0 $NFS_DATA ext4 rw,noatime,attr2,inode64,nobarrier,sunit=1024,swidth=4096,nofail 0 2" >> /etc/fstab
+    mkfs -t xfs /dev/md0
+    echo "/dev/md0 $NFS_DATA xfs rw,noatime,attr2,inode64,nobarrier,sunit=1024,swidth=4096,nofail 0 2" >> /etc/fstab
 }
 
 mount_nfs()
