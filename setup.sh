@@ -5,6 +5,7 @@ set -x
 # Shares
 NFS_DATA=/share/data
 mkdir -p $NFS_DATA
+chmod 777 $NFS_DATA
 
 BLACKLIST="/dev/sda|/dev/sdb"
 
