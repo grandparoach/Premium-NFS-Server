@@ -2,10 +2,12 @@
 
 set -x
 
+MASTER_NAME=$1
+echo $MASTER_NAME
+
 # Shares
 NFS_DATA=/share/data
 mkdir -p $NFS_DATA
-
 
 install_pkgs()
 {
@@ -14,21 +16,14 @@ install_pkgs()
 }
 
 
-
-
 mount_nfs()
 {
-
-    echo "$NFS_DATA    *(rw,async)" >> /etc/exports
-    systemctl enable rpcbind || echo "Already enabled"
-    systemctl enable nfs-server || echo "Already enabled"
-    systemctl start rpcbind || echo "Already enabled"
-    systemctl start nfs-server || echo "Already enabled"
-    
-    exportfs
-	exportfs -a
-	exportfs 
+	showmount -e ${MASTER_NAME}
+	mount -t nfs ${MASTER_NAME}:${NFS_DATA} ${NFS_DATA}
+	
+	echo "${MASTER_NAME}:${NFS_DATA} ${NFS_DATA} nfs defaults,nofail  0 0" >> /etc/fstab
 }
+
 
 systemctl stop firewalld
 systemctl disable firewalld
