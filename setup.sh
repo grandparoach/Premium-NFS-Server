@@ -2,6 +2,8 @@
 
 set -x
 
+ADMIN_USER=$1
+
 # Shares
 NFS_DATA=/share/data
 mkdir -p $NFS_DATA
@@ -65,7 +67,8 @@ setup_raid()
 
 mount_nfs()
 {
-
+    chown $ADMIN_USER:1000 $NFS_DATA
+    
     echo "$NFS_DATA    *(rw,async)" >> /etc/exports
     systemctl enable rpcbind || echo "Already enabled"
     systemctl enable nfs-server || echo "Already enabled"
