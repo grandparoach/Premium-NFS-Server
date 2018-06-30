@@ -7,7 +7,7 @@ ADMIN_USER=$1
 # Shares
 NFS_DATA=/share/data
 mkdir -p $NFS_DATA
-chmod 777 $NFS_DATA
+
 
 BLACKLIST="/dev/sda|/dev/sdb"
 
@@ -61,13 +61,14 @@ setup_raid()
 	mdadm -C /dev/md0 -l raid0 -n "$DISKCOUNT" "${DISKS[@]}"
 
     #Create File System
-    mkfs -t xfs /dev/md0
+    mkfs -t ext4 /dev/md0
     echo "/dev/md0 $NFS_DATA xfs rw,noatime,attr2,inode64,nobarrier,sunit=1024,swidth=4096,nofail 0 2" >> /etc/fstab
 }
 
 mount_nfs()
 {
     chown $ADMIN_USER:1000 $NFS_DATA
+    chmod 777 $NFS_DATA
     
     echo "$NFS_DATA    *(rw,async)" >> /etc/exports
     systemctl enable rpcbind || echo "Already enabled"
