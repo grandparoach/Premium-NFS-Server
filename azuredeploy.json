@@ -2,16 +2,9 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "vmPrefix": {
+    "NFSVMsku": {
       "type": "string",
-      "metadata": {
-        "description": "Base string for naming resources (max length of 8)"
-      },
-      "maxLength": 8
-    },
-    "MasterVMsku": {
-      "type": "string",
-      "defaultValue": "Standard_F16s_v2",
+      "defaultValue": "Standard_E64s_v3",
       "allowedValues": [
         "Standard_DS3_v2",
         "Standard_DS4_v2",
@@ -21,20 +14,63 @@
         "Standard_DS13_v2",
         "Standard_DS14_v2",
         "Standard_DS15_v2",
-        "Standard_F8s_v2",
+        
         "Standard_D8s_v3",
         "Standard_D16s_v3",
         "Standard_D32s_v3",
         "Standard_D64s_v3",
+
+        "Standard_E8s_v3",
+        "Standard_E16s_v3",
+        "Standard_E32s_v3",
+        "Standard_E64s_v3",
+
+        "Standard_F8s_v2",
         "Standard_F16s_v2",
         "Standard_F32s_v2",
         "Standard_F64s_v2"
       ],
       "metadata": {
-        "description": "sku to use for the master VM"
+        "description": "sku to use for the NFS server VM"
       }
     },
-    "masterImage": {
+    "NISVMsku": {
+      "type": "string",
+      "defaultValue": "Standard_F16",
+      "allowedValues": [
+        "Standard_F4",
+        "Standard_F8",
+        "Standard_F16"
+      ],
+      "metadata": {
+        "description": "sku to use for the NIS Server VM"
+      }
+    },
+    "SGEVMsku": {
+      "type": "string",
+      "defaultValue": "Standard_F16",
+      "allowedValues": [
+        "Standard_F4",
+        "Standard_F8",
+        "Standard_F16"
+      ],
+      "metadata": {
+        "description": "sku to use for the SGE Server VM"
+      }
+    },
+    "LICVMsku": {
+      "type": "string",
+      "defaultValue": "Standard_F16",
+      "allowedValues": [
+        "Standard_F4",
+        "Standard_F8",
+        "Standard_F16"
+      ],
+      "metadata": {
+        "description": "sku to use for the License Server VM"
+      }
+    },
+    "ServerImage": {
       "type": "string",
       "defaultValue": "CentOS_7.4",
       "allowedValues": [
@@ -44,6 +80,69 @@
       "metadata": {
         "description": "The VM image of the master nodes"
       }
+    },
+    "CompNodeVMsku": {
+      "type": "string",
+      "defaultValue": "Standard_H16m",
+      "allowedValues": [
+        "Standard_A8",
+        "Standard_A9",
+        "Standard_D2_v2",
+        "Standard_D3_v2",
+        "Standard_D4_v2",
+        "Standard_D5_v2",
+        "Standard_D11_v2",
+        "Standard_D12_v2",
+        "Standard_D13_v2",
+        "Standard_D14_v2",
+        "Standard_D15_v2",
+        "Standard_DS2_v2",
+        "Standard_DS3_v2",
+        "Standard_DS4_v2",
+        "Standard_DS5_v2",
+        "Standard_DS11_v2",
+        "Standard_DS12_v2",
+        "Standard_DS13_v2",
+        "Standard_DS14_v2",
+        "Standard_DS15_v2",
+        "Standard_F4",
+        "Standard_F8",
+        "Standard_F16",
+        "Standard_F4s",
+        "Standard_F8s",
+        "Standard_F16s",
+        "Standard_H8",
+        "Standard_H16",
+        "Standard_H8m",
+        "Standard_H16m",
+        "Standard_H16r",
+        "Standard_H16mr",
+        "Standard_NC6",
+        "Standard_NC12",
+        "Standard_NC24",
+        "Standard_NC24r"
+      ],
+      "metadata": {
+        "description": "Instance type to use for the compute nodes"
+      }
+    },
+    "computeNodeImage": {
+      "type": "string",
+      "defaultValue": "CentOS_7.3",
+      "allowedValues": [
+        "CentOS_7.3"
+      ],
+      "metadata": {
+        "description": "The VM image of the compute nodes"
+      }
+    },
+    "computeNodeCount": {
+      "type": "int",
+      "metadata": {
+        "description": "Number of VM instances for Compute Node Scaleset (100 or less)."
+      },
+      "defaultValue": 64,
+      "maxValue": 100
     },
     "adminUserName": {
       "type": "string",
@@ -78,14 +177,14 @@
     },
     "dataDiskSize": {
       "type": "int",
-      "defaultValue": 128,
+      "defaultValue": 1024,
       "metadata": {
         "description": "The size in GB of each of the data disks that are attached to the VM.  A RAID-0 volume is created with all data disks that is dataDiskSize * dataDiskCount in size."
       }
     },
     "nbDataDisks": {
       "type": "int",
-      "defaultValue": 8,
+      "defaultValue": 16,
       "maxValue": 16,
       "metadata": {
         "description": "The number of disks to attach to the NFS server."
@@ -93,21 +192,21 @@
     },
     "existingVNetName": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "POC-Network",
       "metadata": {
         "description": "name of existing Virtual Network"
       }
     },
     "existingVNetResourceGroup": {
       "type": "string",
-       "defaultValue": "",
+       "defaultValue": "POC-ResourceGroup",
       "metadata": {
         "description": "name of Resource Group for existing Virtual Network"
       }
     },
     "existingSubnetName": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "POC-Subnet",
       "metadata": {
         "description": "name of existing Virtual Network"
       }
@@ -115,17 +214,34 @@
   },
   "variables": {
     "location": "[resourceGroup().location]",
-    "longNamingInfix": "[toLower(parameters('vmPrefix'))]",
-    "newStorageAccountSuffix": "[concat(variables('longNamingInfix'), 'sa')]",
     "vnetID": "[resourceId(parameters('existingVNetResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('existingVNetName'))]",
     "SubnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-    "masterBoxName": "[concat(variables('longNamingInfix'), 'master')]",
-    "DiagSAName": "[concat(uniqueString(concat(resourceGroup().id, variables('newStorageAccountSuffix'), 'masterboxsadiag')), 'diag')]",
-    "MasterIPConfigName": "[concat(variables('masterBoxName'), 'ipconfig')]",
-    "MasterNicName": "[concat(variables('masterBoxName'), 'nic')]",
-    "MasterimageReference": "[variables('computeImages')[parameters('masterImage')]]",
+    "DiagSAName": "[concat(uniqueString(subscription().id, resourceGroup().id), 'diag')]",
+    "NFSName": "NFS01",
+    "NISName": "NIS01",
+    "SGEName": "sgemaster",
+    "LICName": "LIC01",
+    "ClusterPrefix": "cluster",
+    "NFSIPConfigName": "[concat(variables('NFSName'), 'ipconfig')]",
+    "NISIPConfigName": "[concat(variables('NISName'), 'ipconfig')]",
+    "SGEIPConfigName": "[concat(variables('SGEName'), 'ipconfig')]",
+    "LICIPConfigName": "[concat(variables('LICName'), 'ipconfig')]",
+    "NodeipConfigName": "[concat(variables('ClusterPrefix'), 'ipconfig')]",
+    "NFSNicName": "[concat(variables('NFSName'), 'nic')]",
+    "NISNicName": "[concat(variables('NISName'), 'nic')]",
+    "SGENicName": "[concat(variables('SGEName'), 'nic')]",
+    "LICNicName": "[concat(variables('LICName'), 'nic')]",
+    "NodenicName": "[concat(variables('ClusterPrefix'), 'nic')]",
+    "ServerimageReference": "[variables('Images')[parameters('ServerImage')]]",
+    "computeNodeimageReference": "[variables('Images')[parameters('computeNodeImage')]]",
     "sshKeyPath": "[concat('/home/',parameters('adminUserName'),'/.ssh/authorized_keys')]",
-    "computeImages": {
+    "Images": {
+      "CentOS_7.3": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "7.3",
+        "version": "latest"
+      },
       "CentOS_7.4": {
         "publisher": "OpenLogic",
         "offer": "CentOS",
@@ -155,11 +271,17 @@
     
     "storageAccountType": "Standard_LRS",
     
-    "mastervmScripts": {
+    "NFSScripts": {
       "scriptsToDownload": [
-        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/master/setup.sh"
+        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/special/setup.sh"
       ],
-      "commandToExecute": "bash setup.sh"
+      "commandToExecute": "[concat('bash setup.sh ', parameters('adminUserName'))]"
+    },
+    "clientScripts": {
+      "scriptsToDownload": [
+        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/special/client-setup.sh"
+      ],
+      "commandToExecute": "[concat('bash client-setup.sh ', variables('NFSName'))]"
     }
   },  
   "resources": [
@@ -174,14 +296,14 @@
     },
     {
       "type": "Microsoft.Network/networkInterfaces",
-      "name": "[variables('MasterNicName')]",
+      "name": "[variables('NFSNicName')]",
       "location": "[variables('location')]",
       "apiVersion": "2018-04-01",
       "dependsOn": [ ],
       "properties": {
         "ipConfigurations": [
           {
-            "name": "[variables('MasterIPConfigName')]",
+            "name": "[variables('NFSIPConfigName')]",
             "properties":  {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
@@ -195,25 +317,25 @@
     },
     {
       "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('masterBoxName')]",
+      "name": "[variables('NFSName')]",
       "location": "[variables('location')]",
       "apiVersion": "2017-03-30",
       "dependsOn": [
-        "[concat('Microsoft.Network/networkinterfaces/', variables('MasterNicName'))]",
+        "[concat('Microsoft.Network/networkinterfaces/', variables('NFSNicName'))]",
         "[concat('Microsoft.Storage/storageAccounts/', variables('DiagSAName'))]"
       ],
       "properties": {
         "hardwareProfile": {
-          "vmSize": "[parameters('MasterVMsku')]"
+          "vmSize": "[parameters('NFSVMsku')]"
         },
         "osProfile": {
-          "computerName": "[variables('masterBoxName')]",
+          "computerName": "[variables('NFSName')]",
           "adminUsername": "[parameters('adminUserName')]",
           "adminPassword": "[parameters('adminPassword')]",
           "linuxConfiguration": "[variables('linuxConfiguration')]"
         },
         "storageProfile": {
-          "imageReference": "[variables('MasterimageReference')]",
+          "imageReference": "[variables('ServerimageReference')]",
           "osDisk": {
             "caching": "ReadOnly",
             "createOption": "FromImage",
@@ -228,6 +350,7 @@
             "input": {
                 "lun": "[copyIndex('dataDisks')]",
                 "createOption": "Empty",
+                "caching": "ReadOnly",
                 "diskSizeGB": "[parameters('datadiskSize')]"
             }
         }]
@@ -237,7 +360,7 @@
         "networkProfile": {
           "networkInterfaces": [
             {
-               "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('MasterNicName'))]"
+               "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('NFSNicName'))]"
             }
           ]
         },
@@ -251,11 +374,11 @@
     },     
     {
       "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat(variables('masterBoxName'), '/ext')]",
+      "name": "[concat(variables('NFSName'), '/ext')]",
       "apiVersion": "2015-06-15",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', variables('masterBoxName'))]"
+        "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'))]"
       ],
       "properties": {
         "publisher": "Microsoft.Azure.Extensions",
@@ -263,13 +386,345 @@
         "typeHandlerVersion": "2.0",
         "autoUpgradeMinorVersion": true,
         "settings": {
-          "fileUris": "[variables('mastervmScripts').scriptsToDownload]"
+          "fileUris": "[variables('NFSScripts').scriptsToDownload]"
         },
         "protectedSettings": {
-          "commandToExecute": "[variables('mastervmScripts').commandToExecute]"
+          "commandToExecute": "[variables('NFSScripts').commandToExecute]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('NISNicName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2018-04-01",
+      "dependsOn": [ ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[variables('NISIPConfigName')]",
+            "properties":  {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('SubnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('NISName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2017-03-30",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkinterfaces/', variables('NISNicName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('DiagSAName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('NISVMsku')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('NISName')]",
+          "adminUsername": "[parameters('adminUserName')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "linuxConfiguration": "[variables('linuxConfiguration')]"
+        },
+        "storageProfile": {
+          "imageReference": "[variables('ServerimageReference')]",
+          "osDisk": {
+            "caching": "ReadOnly",
+            "createOption": "FromImage",
+             "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+             }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+               "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('NISNicName'))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+           "storageUri": "[concat('http://',variables('DiagSAName'),'.blob.core.windows.net')]"
+          }
+        }
+      }
+    },     
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('NISName'), '/ext')]",
+      "apiVersion": "2015-06-15",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', variables('NISName'))]",
+        "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'),'/extensions/ext')]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.0",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": "[variables('clientScripts').scriptsToDownload]"
+        },
+        "protectedSettings": {
+          "commandToExecute": "[variables('clientScripts').commandToExecute]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('SGENicName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2018-04-01",
+      "dependsOn": [ ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[variables('SGEIPConfigName')]",
+            "properties":  {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('SubnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('SGEName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2017-03-30",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkinterfaces/', variables('SGENicName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('DiagSAName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('SGEVMsku')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('SGEName')]",
+          "adminUsername": "[parameters('adminUserName')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "linuxConfiguration": "[variables('linuxConfiguration')]"
+        },
+        "storageProfile": {
+          "imageReference": "[variables('ServerimageReference')]",
+          "osDisk": {
+            "caching": "ReadOnly",
+            "createOption": "FromImage",
+             "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+             }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+               "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('SGENicName'))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+           "storageUri": "[concat('http://',variables('DiagSAName'),'.blob.core.windows.net')]"
+          }
+        }
+      }
+    },     
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('SGEName'), '/ext')]",
+      "apiVersion": "2015-06-15",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', variables('SGEName'))]",
+        "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'),'/extensions/ext')]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.0",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": "[variables('clientScripts').scriptsToDownload]"
+        },
+        "protectedSettings": {
+          "commandToExecute": "[variables('clientScripts').commandToExecute]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('LICNicName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2018-04-01",
+      "dependsOn": [ ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[variables('LICIPConfigName')]",
+            "properties":  {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('SubnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('LICName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2017-03-30",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkinterfaces/', variables('LICNicName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('DiagSAName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('LICVMsku')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('LICName')]",
+          "adminUsername": "[parameters('adminUserName')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "linuxConfiguration": "[variables('linuxConfiguration')]"
+        },
+        "storageProfile": {
+          "imageReference": "[variables('ServerimageReference')]",
+          "osDisk": {
+            "caching": "ReadOnly",
+            "createOption": "FromImage",
+             "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+             }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+               "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('LICNicName'))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+           "storageUri": "[concat('http://',variables('DiagSAName'),'.blob.core.windows.net')]"
+          }
+        }
+      }
+    },     
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('LICName'), '/ext')]",
+      "apiVersion": "2015-06-15",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', variables('LICName'))]",
+        "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'),'/extensions/ext')]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.0",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": "[variables('clientScripts').scriptsToDownload]"
+        },
+        "protectedSettings": {
+          "commandToExecute": "[variables('clientScripts').commandToExecute]"
+        }
+      }
+    },
+    {
+        "type": "Microsoft.Compute/virtualMachineScaleSets",
+        "name": "[variables('ClusterPrefix')]",
+        "location": "[variables('location')]",
+        "apiVersion": "2017-12-01",
+        "sku": {
+          "name": "[parameters('CompNodeVMsku')]",
+          "tier": "Standard",
+          "capacity": "[parameters('computeNodeCount')]"
+        },
+        "dependsOn": [
+          "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'),'/extensions/ext')]"
+        ],
+        "properties": {
+          "overprovision": "false",
+          "upgradePolicy": {
+            "mode": "Manual"
+          },
+          "virtualMachineProfile": {
+            "networkProfile": {
+              "networkInterfaceConfigurations": [
+                {
+                  "name": "[variables('NodenicName')]",
+                  "properties": {
+                    "primary": "true",
+                    "ipConfigurations": [
+                      {
+                        "name": "[variables('NodeipConfigName')]",
+                        "properties": {
+                          "subnet": {
+                              "id": "[variables('SubnetRef')]"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "osProfile": {
+              "computerNamePrefix": "[variables('clusterPrefix')]",
+              "adminUsername": "[parameters('adminUserName')]",
+              "adminPassword": "[parameters('adminPassword')]",
+              "linuxConfiguration": "[variables('linuxConfiguration')]"
+            },
+            "storageProfile": {
+              "imageReference": "[variables('computeNodeimageReference')]",  
+              "osDisk": {
+                "caching": "ReadOnly",
+                "createOption": "FromImage",
+                "managedDisk": {
+                  "storageAccountType": "Standard_LRS"
+              }
+            }
+          },
+          "extensionProfile": {
+            "extensions": [
+              {
+                "name": "installCN",
+                "properties": {
+                  "publisher": "Microsoft.Azure.Extensions",
+                  "type": "CustomScript",
+                  "typeHandlerVersion": "2.0",
+                  "autoUpgradeMinorVersion": true,
+                  "settings": {
+                    "fileUris": "[variables('clientScripts').scriptsToDownload]",
+                    "commandToExecute": "[variables('clientScripts').commandToExecute]"
+                  }
+                }
+              }
+            ]
+          }
         }
       }
     }
   ]
 }
-
