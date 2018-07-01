@@ -61,8 +61,13 @@ setup_raid()
 	mdadm -C /dev/md0 -l raid0 -n "$DISKCOUNT" "${DISKS[@]}"
 
     #Create File System
-    mkfs -t xfs /dev/md0
-    echo "/dev/md0 $NFS_DATA xfs rw,noatime,attr2,inode64,nobarrier,sunit=1024,swidth=4096,nofail 0 2" >> /etc/fstab
+    #mkfs -t xfs /dev/md0
+    #echo "/dev/md0 $NFS_DATA xfs rw,noatime,attr2,inode64,nobarrier,sunit=1024,swidth=4096,nofail 0 2" >> /etc/fstab
+    
+    mkfs.ext4 /dev/md0
+    mount -o defaults /dev/md0 $NFS_DATA
+    echo "$NFS_DATA ext4 defaults 0 2" >> /etc/fstab
+    
 }
 
 mount_nfs()
@@ -78,7 +83,7 @@ mount_nfs()
 	exportfs -a
 	exportfs 
     
-    cd /share/data
+    cd $NFS_DATA
     chown $ADMIN_USER:1000 .
     chmod 777 .
     
