@@ -66,7 +66,7 @@ setup_raid()
     
     mkfs.ext4 /dev/md0
     mount -o defaults /dev/md0 $NFS_DATA
-    echo "$NFS_DATA ext4 defaults 0 2" >> /etc/fstab
+    echo "/dev/md0 $NFS_DATA ext4 defaults 0 2" >> /etc/fstab
     
 }
 
