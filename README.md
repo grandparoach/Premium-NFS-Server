@@ -12,6 +12,7 @@ Clicking this button will deploy 4 servers - the NFS Server, an NIS Server, a Li
 
 
 
-Clicking this button will deply the cluster nodes.  This branch will deploy the stock CentOS 7.3 image 
+Clicking this button will deply the cluster nodes.  This branch will deploy the stock CentOS 7.3 image
+
 [![Click to deploy template on Azure](http://azuredeploy.net/deploybutton.png "Click to deploy template on Azure")](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fgrandparoach%2FPremium-NFS-Server%2Fspecial%2Fcluster.json)  
 
