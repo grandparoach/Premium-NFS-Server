@@ -188,9 +188,7 @@
           "tier": "Standard",
           "capacity": "[parameters('computeNodeCount')]"
         },
-        "dependsOn": [
-          "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'),'/extensions/ext')]"
-        ],
+        "dependsOn": [],
         "properties": {
           "overprovision": "false",
           "upgradePolicy": {
