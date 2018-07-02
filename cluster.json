@@ -2,6 +2,13 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "ClusterPrefix": {
+      "type": "string",
+      "defaultValue": "cluster",
+      "metadata": {
+        "description": "The name of the cluster nodes"
+      }
+    },
     "CompNodeVMsku": {
       "type": "string",
       "defaultValue": "Standard_H16m",
@@ -47,6 +54,17 @@
         "description": "Instance type to use for the compute nodes"
       }
     },
+    "imageSelection": {
+      "type": "string",
+      "defaultValue": "stock",
+      "allowedValues": [
+        "stock",
+        "custom"
+      ],
+      "metadata": {
+        "description": "select whether to install from a custom or stock image"
+      }
+    },
     "computeNodeImage": {
       "type": "string",
       "defaultValue": "CentOS_7.3",
@@ -54,7 +72,21 @@
         "CentOS_7.3"
       ],
       "metadata": {
-        "description": "The VM image of the compute nodes"
+        "description": "The stock Marketplace image of the compute nodes"
+      }
+    },
+    "imageResourceGroup": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Resource group of the customized disk image"
+      }
+    },
+    "imageName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the customized disk image"
       }
     },
     "computeNodeCount": {
@@ -122,23 +154,12 @@
     "location": "[resourceGroup().location]",
     "vnetID": "[resourceId(parameters('existingVNetResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('existingVNetName'))]",
     "SubnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-    "DiagSAName": "[concat(uniqueString(subscription().id, resourceGroup().id), 'diag')]",
     "NFSName": "NFS01",
-    "NISName": "NIS01",
-    "SGEName": "sgemaster",
-    "LICName": "LIC01",
-    "ClusterPrefix": "cluster",
-    "NFSIPConfigName": "[concat(variables('NFSName'), 'ipconfig')]",
-    "NISIPConfigName": "[concat(variables('NISName'), 'ipconfig')]",
-    "SGEIPConfigName": "[concat(variables('SGEName'), 'ipconfig')]",
-    "LICIPConfigName": "[concat(variables('LICName'), 'ipconfig')]",
-    "NodeipConfigName": "[concat(variables('ClusterPrefix'), 'ipconfig')]",
-    "NFSNicName": "[concat(variables('NFSName'), 'nic')]",
-    "NISNicName": "[concat(variables('NISName'), 'nic')]",
-    "SGENicName": "[concat(variables('SGEName'), 'nic')]",
-    "LICNicName": "[concat(variables('LICName'), 'nic')]",
-    "NodenicName": "[concat(variables('ClusterPrefix'), 'nic')]",
-    "computeNodeimageReference": "[variables('Images')[parameters('computeNodeImage')]]",
+    "NodeipConfigName": "[concat(parameters('ClusterPrefix'), 'ipconfig')]",
+    "NodenicName": "[concat(parameters('ClusterPrefix'), 'nic')]",
+    "computeNodeimageReference_stock": "[variables('Images')[parameters('computeNodeImage')]]",
+    "computeNodeimageReference_custom": {"id": "[resourceId(parameters('imageResourceGroup'), 'Microsoft.Compute/images', parameters('imageName'))]"},
+    "computeNodeimageReference": "[variables(concat('computeNodeimageReference_',parameters('imageSelection')))]",
     "sshKeyPath": "[concat('/home/',parameters('adminUserName'),'/.ssh/authorized_keys')]",
     "Images": {
       "CentOS_7.3": {
@@ -180,7 +201,7 @@
   "resources": [
     {
         "type": "Microsoft.Compute/virtualMachineScaleSets",
-        "name": "[variables('ClusterPrefix')]",
+        "name": "[parameters('ClusterPrefix')]",
         "location": "[variables('location')]",
         "apiVersion": "2017-12-01",
         "sku": {
@@ -188,7 +209,7 @@
           "tier": "Standard",
           "capacity": "[parameters('computeNodeCount')]"
         },
-        "dependsOn": [],
+        "dependsOn": [ ],
         "properties": {
           "overprovision": "false",
           "upgradePolicy": {
@@ -216,7 +237,7 @@
               ]
             },
             "osProfile": {
-              "computerNamePrefix": "[variables('clusterPrefix')]",
+              "computerNamePrefix": "[parameters('clusterPrefix')]",
               "adminUsername": "[parameters('adminUserName')]",
               "adminPassword": "[parameters('adminPassword')]",
               "linuxConfiguration": "[variables('linuxConfiguration')]"
