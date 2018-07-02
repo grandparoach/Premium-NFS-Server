@@ -1,0 +1,257 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "CompNodeVMsku": {
+      "type": "string",
+      "defaultValue": "Standard_H16m",
+      "allowedValues": [
+        "Standard_A8",
+        "Standard_A9",
+        "Standard_D2_v2",
+        "Standard_D3_v2",
+        "Standard_D4_v2",
+        "Standard_D5_v2",
+        "Standard_D11_v2",
+        "Standard_D12_v2",
+        "Standard_D13_v2",
+        "Standard_D14_v2",
+        "Standard_D15_v2",
+        "Standard_DS2_v2",
+        "Standard_DS3_v2",
+        "Standard_DS4_v2",
+        "Standard_DS5_v2",
+        "Standard_DS11_v2",
+        "Standard_DS12_v2",
+        "Standard_DS13_v2",
+        "Standard_DS14_v2",
+        "Standard_DS15_v2",
+        "Standard_F4",
+        "Standard_F8",
+        "Standard_F16",
+        "Standard_F4s",
+        "Standard_F8s",
+        "Standard_F16s",
+        "Standard_H8",
+        "Standard_H16",
+        "Standard_H8m",
+        "Standard_H16m",
+        "Standard_H16r",
+        "Standard_H16mr",
+        "Standard_NC6",
+        "Standard_NC12",
+        "Standard_NC24",
+        "Standard_NC24r"
+      ],
+      "metadata": {
+        "description": "Instance type to use for the compute nodes"
+      }
+    },
+    "computeNodeImage": {
+      "type": "string",
+      "defaultValue": "CentOS_7.3",
+      "allowedValues": [
+        "CentOS_7.3"
+      ],
+      "metadata": {
+        "description": "The VM image of the compute nodes"
+      }
+    },
+    "computeNodeCount": {
+      "type": "int",
+      "metadata": {
+        "description": "Number of VM instances for Compute Node Scaleset (100 or less)."
+      },
+      "defaultValue": 64,
+      "maxValue": 100
+    },
+    "adminUserName": {
+      "type": "string",
+      "metadata": {
+        "description": "User name for the Virtual Machine."
+      }
+    },
+    "authenticationType": {
+      "type": "string",
+      "defaultValue": "password",
+      "allowedValues": [
+        "password",
+        "sshPublicKey"
+      ],
+      "metadata": {
+        "description": "Authentication type for the virtual machines"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Admin password for the virtual machines"
+      }
+    },
+    "sshPublicKey": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "SSH public key that will be included on all nodes. The OpenSSH public key can be generated with tools like ssh-keygen on Linux or OS X."
+      }
+    },
+    "existingVNetName": {
+      "type": "string",
+      "defaultValue": "POC-Network",
+      "metadata": {
+        "description": "name of existing Virtual Network"
+      }
+    },
+    "existingVNetResourceGroup": {
+      "type": "string",
+       "defaultValue": "POC-ResourceGroup",
+      "metadata": {
+        "description": "name of Resource Group for existing Virtual Network"
+      }
+    },
+    "existingSubnetName": {
+      "type": "string",
+      "defaultValue": "POC-Subnet",
+      "metadata": {
+        "description": "name of existing Virtual Network"
+      }
+    }
+  },
+  "variables": {
+    "location": "[resourceGroup().location]",
+    "vnetID": "[resourceId(parameters('existingVNetResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('existingVNetName'))]",
+    "SubnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
+    "DiagSAName": "[concat(uniqueString(subscription().id, resourceGroup().id), 'diag')]",
+    "NFSName": "NFS01",
+    "NISName": "NIS01",
+    "SGEName": "sgemaster",
+    "LICName": "LIC01",
+    "ClusterPrefix": "cluster",
+    "NFSIPConfigName": "[concat(variables('NFSName'), 'ipconfig')]",
+    "NISIPConfigName": "[concat(variables('NISName'), 'ipconfig')]",
+    "SGEIPConfigName": "[concat(variables('SGEName'), 'ipconfig')]",
+    "LICIPConfigName": "[concat(variables('LICName'), 'ipconfig')]",
+    "NodeipConfigName": "[concat(variables('ClusterPrefix'), 'ipconfig')]",
+    "NFSNicName": "[concat(variables('NFSName'), 'nic')]",
+    "NISNicName": "[concat(variables('NISName'), 'nic')]",
+    "SGENicName": "[concat(variables('SGEName'), 'nic')]",
+    "LICNicName": "[concat(variables('LICName'), 'nic')]",
+    "NodenicName": "[concat(variables('ClusterPrefix'), 'nic')]",
+    "computeNodeimageReference": "[variables('Images')[parameters('computeNodeImage')]]",
+    "sshKeyPath": "[concat('/home/',parameters('adminUserName'),'/.ssh/authorized_keys')]",
+    "Images": {
+      "CentOS_7.3": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "7.3",
+        "version": "latest"
+      }
+    },
+    "linuxConfiguration_sshPublicKey": {
+      "disablePasswordAuthentication": "true",
+      "ssh": {
+        "publicKeys": [
+          {
+            "path": "[variables('sshKeyPath')]",
+            "keyData": "[parameters('sshPublicKey')]"
+          }
+        ]
+      }
+    },
+    "linuxConfiguration_password": { },
+    "linuxConfiguration": "[variables(concat('linuxConfiguration_',parameters('authenticationType')))]",
+    
+    "storageAccountType": "Standard_LRS",
+    
+    "NFSScripts": {
+      "scriptsToDownload": [
+        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/special/setup.sh"
+      ],
+      "commandToExecute": "[concat('bash setup.sh ', parameters('adminUserName'))]"
+    },
+    "clientScripts": {
+      "scriptsToDownload": [
+        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/special/client-setup.sh"
+      ],
+      "commandToExecute": "[concat('bash client-setup.sh ', variables('NFSName'))]"
+    }
+  },  
+  "resources": [
+    {
+        "type": "Microsoft.Compute/virtualMachineScaleSets",
+        "name": "[variables('ClusterPrefix')]",
+        "location": "[variables('location')]",
+        "apiVersion": "2017-12-01",
+        "sku": {
+          "name": "[parameters('CompNodeVMsku')]",
+          "tier": "Standard",
+          "capacity": "[parameters('computeNodeCount')]"
+        },
+        "dependsOn": [
+          "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'),'/extensions/ext')]"
+        ],
+        "properties": {
+          "overprovision": "false",
+          "upgradePolicy": {
+            "mode": "Manual"
+          },
+          "virtualMachineProfile": {
+            "networkProfile": {
+              "networkInterfaceConfigurations": [
+                {
+                  "name": "[variables('NodenicName')]",
+                  "properties": {
+                    "primary": "true",
+                    "ipConfigurations": [
+                      {
+                        "name": "[variables('NodeipConfigName')]",
+                        "properties": {
+                          "subnet": {
+                              "id": "[variables('SubnetRef')]"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "osProfile": {
+              "computerNamePrefix": "[variables('clusterPrefix')]",
+              "adminUsername": "[parameters('adminUserName')]",
+              "adminPassword": "[parameters('adminPassword')]",
+              "linuxConfiguration": "[variables('linuxConfiguration')]"
+            },
+            "storageProfile": {
+              "imageReference": "[variables('computeNodeimageReference')]",  
+              "osDisk": {
+                "caching": "ReadOnly",
+                "createOption": "FromImage",
+                "managedDisk": {
+                  "storageAccountType": "Standard_LRS"
+              }
+            }
+          },
+          "extensionProfile": {
+            "extensions": [
+              {
+                "name": "installCN",
+                "properties": {
+                  "publisher": "Microsoft.Azure.Extensions",
+                  "type": "CustomScript",
+                  "typeHandlerVersion": "2.0",
+                  "autoUpgradeMinorVersion": true,
+                  "settings": {
+                    "fileUris": "[variables('clientScripts').scriptsToDownload]",
+                    "commandToExecute": "[variables('clientScripts').commandToExecute]"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
