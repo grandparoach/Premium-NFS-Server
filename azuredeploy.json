@@ -81,69 +81,6 @@
         "description": "The VM image of the master nodes"
       }
     },
-    "CompNodeVMsku": {
-      "type": "string",
-      "defaultValue": "Standard_H16m",
-      "allowedValues": [
-        "Standard_A8",
-        "Standard_A9",
-        "Standard_D2_v2",
-        "Standard_D3_v2",
-        "Standard_D4_v2",
-        "Standard_D5_v2",
-        "Standard_D11_v2",
-        "Standard_D12_v2",
-        "Standard_D13_v2",
-        "Standard_D14_v2",
-        "Standard_D15_v2",
-        "Standard_DS2_v2",
-        "Standard_DS3_v2",
-        "Standard_DS4_v2",
-        "Standard_DS5_v2",
-        "Standard_DS11_v2",
-        "Standard_DS12_v2",
-        "Standard_DS13_v2",
-        "Standard_DS14_v2",
-        "Standard_DS15_v2",
-        "Standard_F4",
-        "Standard_F8",
-        "Standard_F16",
-        "Standard_F4s",
-        "Standard_F8s",
-        "Standard_F16s",
-        "Standard_H8",
-        "Standard_H16",
-        "Standard_H8m",
-        "Standard_H16m",
-        "Standard_H16r",
-        "Standard_H16mr",
-        "Standard_NC6",
-        "Standard_NC12",
-        "Standard_NC24",
-        "Standard_NC24r"
-      ],
-      "metadata": {
-        "description": "Instance type to use for the compute nodes"
-      }
-    },
-    "computeNodeImage": {
-      "type": "string",
-      "defaultValue": "CentOS_7.3",
-      "allowedValues": [
-        "CentOS_7.3"
-      ],
-      "metadata": {
-        "description": "The VM image of the compute nodes"
-      }
-    },
-    "computeNodeCount": {
-      "type": "int",
-      "metadata": {
-        "description": "Number of VM instances for Compute Node Scaleset (100 or less)."
-      },
-      "defaultValue": 64,
-      "maxValue": 100
-    },
     "adminUserName": {
       "type": "string",
       "metadata": {
@@ -233,7 +170,6 @@
     "LICNicName": "[concat(variables('LICName'), 'nic')]",
     "NodenicName": "[concat(variables('ClusterPrefix'), 'nic')]",
     "ServerimageReference": "[variables('Images')[parameters('ServerImage')]]",
-    "computeNodeimageReference": "[variables('Images')[parameters('computeNodeImage')]]",
     "sshKeyPath": "[concat('/home/',parameters('adminUserName'),'/.ssh/authorized_keys')]",
     "Images": {
       "CentOS_7.3": {
@@ -648,81 +584,6 @@
         },
         "protectedSettings": {
           "commandToExecute": "[variables('clientScripts').commandToExecute]"
-        }
-      }
-    },
-    {
-        "type": "Microsoft.Compute/virtualMachineScaleSets",
-        "name": "[variables('ClusterPrefix')]",
-        "location": "[variables('location')]",
-        "apiVersion": "2017-12-01",
-        "sku": {
-          "name": "[parameters('CompNodeVMsku')]",
-          "tier": "Standard",
-          "capacity": "[parameters('computeNodeCount')]"
-        },
-        "dependsOn": [
-          "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'),'/extensions/ext')]"
-        ],
-        "properties": {
-          "overprovision": "false",
-          "upgradePolicy": {
-            "mode": "Manual"
-          },
-          "virtualMachineProfile": {
-            "networkProfile": {
-              "networkInterfaceConfigurations": [
-                {
-                  "name": "[variables('NodenicName')]",
-                  "properties": {
-                    "primary": "true",
-                    "ipConfigurations": [
-                      {
-                        "name": "[variables('NodeipConfigName')]",
-                        "properties": {
-                          "subnet": {
-                              "id": "[variables('SubnetRef')]"
-                          }
-                        }
-                      }
-                    ]
-                  }
-                }
-              ]
-            },
-            "osProfile": {
-              "computerNamePrefix": "[variables('clusterPrefix')]",
-              "adminUsername": "[parameters('adminUserName')]",
-              "adminPassword": "[parameters('adminPassword')]",
-              "linuxConfiguration": "[variables('linuxConfiguration')]"
-            },
-            "storageProfile": {
-              "imageReference": "[variables('computeNodeimageReference')]",  
-              "osDisk": {
-                "caching": "ReadOnly",
-                "createOption": "FromImage",
-                "managedDisk": {
-                  "storageAccountType": "Standard_LRS"
-              }
-            }
-          },
-          "extensionProfile": {
-            "extensions": [
-              {
-                "name": "installCN",
-                "properties": {
-                  "publisher": "Microsoft.Azure.Extensions",
-                  "type": "CustomScript",
-                  "typeHandlerVersion": "2.0",
-                  "autoUpgradeMinorVersion": true,
-                  "settings": {
-                    "fileUris": "[variables('clientScripts').scriptsToDownload]",
-                    "commandToExecute": "[variables('clientScripts').commandToExecute]"
-                  }
-                }
-              }
-            ]
-          }
         }
       }
     }
