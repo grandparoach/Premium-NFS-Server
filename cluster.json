@@ -130,7 +130,7 @@
     },
     "existingVNetName": {
       "type": "string",
-      "defaultValue": "POC-Network",
+      "defaultValue": "POC-VirtualNetwork",
       "metadata": {
         "description": "name of existing Virtual Network"
       }
