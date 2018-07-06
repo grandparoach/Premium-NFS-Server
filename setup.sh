@@ -77,10 +77,10 @@ setup_raid()
     mkdir -p /global/cfadm
     mkdir -p /global/lsf
     
-    ln /global/projects /projects
-    ln /global/sge /sge
-    ln /global/cfadm /cfadm
-    ln /global/lsf /lsf
+    ln -s /global/projects /projects
+    ln -s /global/sge /sge
+    ln -s /global/cfadm /cfadm
+    ln -s /global/lsf /lsf
 
 }
 
