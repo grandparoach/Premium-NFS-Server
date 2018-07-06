@@ -36,7 +36,7 @@
     },
     "NISVMsku": {
       "type": "string",
-      "defaultValue": "Standard_F16",
+      "defaultValue": "Standard_F8",
       "allowedValues": [
         "Standard_F4",
         "Standard_F8",
@@ -48,7 +48,7 @@
     },
     "SGEVMsku": {
       "type": "string",
-      "defaultValue": "Standard_F16",
+      "defaultValue": "Standard_F8",
       "allowedValues": [
         "Standard_F4",
         "Standard_F8",
@@ -68,17 +68,6 @@
       ],
       "metadata": {
         "description": "sku to use for the License Server VM"
-      }
-    },
-    "ServerImage": {
-      "type": "string",
-      "defaultValue": "CentOS_7.4",
-      "allowedValues": [
-        "CentOS_7.4",
-        "RHEL_7.4"
-      ],
-      "metadata": {
-        "description": "The VM image of the master nodes"
       }
     },
     "adminUserName": {
@@ -129,7 +118,7 @@
     },
     "existingVNetName": {
       "type": "string",
-      "defaultValue": "POC-Network",
+      "defaultValue": "POC-VirtualNetwork",
       "metadata": {
         "description": "name of existing Virtual Network"
       }
@@ -155,23 +144,28 @@
     "SubnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
     "DiagSAName": "[concat(uniqueString(subscription().id, resourceGroup().id), 'diag')]",
     "NFSName": "NFS01",
-    "NISName": "NIS01",
-    "SGEName": "sgemaster",
-    "LICName": "LIC01",
-    "ClusterPrefix": "cluster",
+    "NISName": "Nis01",
+    "SGEName": "gridmaster01",
+    "LICName": "Lic01",
     "NFSIPConfigName": "[concat(variables('NFSName'), 'ipconfig')]",
     "NISIPConfigName": "[concat(variables('NISName'), 'ipconfig')]",
     "SGEIPConfigName": "[concat(variables('SGEName'), 'ipconfig')]",
     "LICIPConfigName": "[concat(variables('LICName'), 'ipconfig')]",
-    "NodeipConfigName": "[concat(variables('ClusterPrefix'), 'ipconfig')]",
     "NFSNicName": "[concat(variables('NFSName'), 'nic')]",
     "NISNicName": "[concat(variables('NISName'), 'nic')]",
     "SGENicName": "[concat(variables('SGEName'), 'nic')]",
     "LICNicName": "[concat(variables('LICName'), 'nic')]",
-    "NodenicName": "[concat(variables('ClusterPrefix'), 'nic')]",
-    "ServerimageReference": "[variables('Images')[parameters('ServerImage')]]",
+    "ServerimageReference": "[variables('Images')['CentOS_7.3']]",
+    "NISimageReference": "[variables('Images')['CentOS_6.9']]",
+    "NFSimageReference": "[variables('Images')['CentOS_7.4']]",
     "sshKeyPath": "[concat('/home/',parameters('adminUserName'),'/.ssh/authorized_keys')]",
     "Images": {
+      "CentOS_6.9": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "6.9",
+        "version": "latest"
+      },
       "CentOS_7.3": {
         "publisher": "OpenLogic",
         "offer": "CentOS",
@@ -181,12 +175,6 @@
       "CentOS_7.4": {
         "publisher": "OpenLogic",
         "offer": "CentOS",
-        "sku": "7.4",
-        "version": "latest"
-      },
-      "RHEL_7.4": {
-        "publisher": "RedHat",
-        "offer": "RHEL",
         "sku": "7.4",
         "version": "latest"
       }
@@ -212,12 +200,6 @@
         "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/special/setup.sh"
       ],
       "commandToExecute": "[concat('bash setup.sh ', parameters('adminUserName'))]"
-    },
-    "clientScripts": {
-      "scriptsToDownload": [
-        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/special/client-setup.sh"
-      ],
-      "commandToExecute": "[concat('bash client-setup.sh ', variables('NFSName'))]"
     }
   },  
   "resources": [
@@ -271,7 +253,7 @@
           "linuxConfiguration": "[variables('linuxConfiguration')]"
         },
         "storageProfile": {
-          "imageReference": "[variables('ServerimageReference')]",
+          "imageReference": "[variables('NFSimageReference')]",
           "osDisk": {
             "caching": "ReadOnly",
             "createOption": "FromImage",
@@ -369,7 +351,7 @@
           "linuxConfiguration": "[variables('linuxConfiguration')]"
         },
         "storageProfile": {
-          "imageReference": "[variables('ServerimageReference')]",
+          "imageReference": "[variables('NISimageReference')]",
           "osDisk": {
             "caching": "ReadOnly",
             "createOption": "FromImage",
@@ -390,28 +372,6 @@
             "enabled": "true",
            "storageUri": "[concat('http://',variables('DiagSAName'),'.blob.core.windows.net')]"
           }
-        }
-      }
-    },     
-    {
-      "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat(variables('NISName'), '/ext')]",
-      "apiVersion": "2015-06-15",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', variables('NISName'))]",
-        "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'),'/extensions/ext')]"
-      ],
-      "properties": {
-        "publisher": "Microsoft.Azure.Extensions",
-        "type": "CustomScript",
-        "typeHandlerVersion": "2.0",
-        "autoUpgradeMinorVersion": true,
-        "settings": {
-          "fileUris": "[variables('clientScripts').scriptsToDownload]"
-        },
-        "protectedSettings": {
-          "commandToExecute": "[variables('clientScripts').commandToExecute]"
         }
       }
     },
@@ -478,28 +438,6 @@
           }
         }
       }
-    },     
-    {
-      "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat(variables('SGEName'), '/ext')]",
-      "apiVersion": "2015-06-15",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', variables('SGEName'))]",
-        "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'),'/extensions/ext')]"
-      ],
-      "properties": {
-        "publisher": "Microsoft.Azure.Extensions",
-        "type": "CustomScript",
-        "typeHandlerVersion": "2.0",
-        "autoUpgradeMinorVersion": true,
-        "settings": {
-          "fileUris": "[variables('clientScripts').scriptsToDownload]"
-        },
-        "protectedSettings": {
-          "commandToExecute": "[variables('clientScripts').commandToExecute]"
-        }
-      }
     },
     {
       "type": "Microsoft.Network/networkInterfaces",
@@ -562,28 +500,6 @@
             "enabled": "true",
            "storageUri": "[concat('http://',variables('DiagSAName'),'.blob.core.windows.net')]"
           }
-        }
-      }
-    },     
-    {
-      "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat(variables('LICName'), '/ext')]",
-      "apiVersion": "2015-06-15",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', variables('LICName'))]",
-        "[concat('Microsoft.Compute/virtualMachines/', variables('NFSName'),'/extensions/ext')]"
-      ],
-      "properties": {
-        "publisher": "Microsoft.Azure.Extensions",
-        "type": "CustomScript",
-        "typeHandlerVersion": "2.0",
-        "autoUpgradeMinorVersion": true,
-        "settings": {
-          "fileUris": "[variables('clientScripts').scriptsToDownload]"
-        },
-        "protectedSettings": {
-          "commandToExecute": "[variables('clientScripts').commandToExecute]"
         }
       }
     }
