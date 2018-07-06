@@ -96,11 +96,12 @@
       "metadata": {
         "description": "Number of VM instances for Compute Node Scaleset (100 or less)."
       },
-      "defaultValue": 4,
+      "defaultValue": 64,
       "maxValue": 100
     },
     "adminUserName": {
       "type": "string",
+      "defaultValue": "",
       "metadata": {
         "description": "User name for the Virtual Machine."
       }
@@ -156,12 +157,12 @@
     "location": "[resourceGroup().location]",
     "vnetID": "[resourceId(parameters('existingVNetResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('existingVNetName'))]",
     "SubnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-    "NFSName": "NFS01",
     "LoginName": "loginserver",
     "LoginIPConfigName": "[concat(variables('loginName'), 'ipconfig')]",
     "NodeipConfigName": "[concat(parameters('ClusterPrefix'), 'ipconfig')]",
     "LoginNicName": "[concat(variables('loginName'), 'nic')]",
     "NodenicName": "[concat(parameters('ClusterPrefix'), 'nic')]",
+    "publicIPAddressName": "[concat(variables('LoginName'), 'pip')]",
     "computeNodeimageReference_stock": "[variables('Images')['CentOS_7.3']]",
     "computeNodeimageReference_custom": {"id": "[resourceId(parameters('imageResourceGroup'), 'Microsoft.Compute/images', parameters('imageName'))]"},
     "computeNodeimageReference": "[variables(concat('computeNodeimageReference_',parameters('imageSelection')))]",
@@ -186,24 +187,36 @@
       }
     },
     "linuxConfiguration_password": { },
-    "linuxConfiguration": "[variables(concat('linuxConfiguration_',parameters('authenticationType')))]",
-    
-    "storageAccountType": "Standard_LRS"
+    "linuxConfiguration": "[variables(concat('linuxConfiguration_',parameters('authenticationType')))]"
     
   },  
   "resources": [
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      }
+    },
     {
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('LoginNicName')]",
       "location": "[variables('location')]",
       "apiVersion": "2018-04-01",
-      "dependsOn": [ ],
+      "dependsOn": [ 
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
+      ],
       "properties": {
         "ipConfigurations": [
           {
             "name": "[variables('LoginIPConfigName')]",
             "properties":  {
               "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+              }, 
               "subnet": {
                 "id": "[variables('SubnetRef')]"
               }
