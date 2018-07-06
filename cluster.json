@@ -56,7 +56,7 @@
     },
     "imageSelection": {
       "type": "string",
-      "defaultValue": "stock",
+      "defaultValue": "custom",
       "allowedValues": [
         "stock",
         "custom"
@@ -65,14 +65,16 @@
         "description": "select whether to install from a custom or stock image"
       }
     },
-    "computeNodeImage": {
+    "LoginVMsku": {
       "type": "string",
-      "defaultValue": "CentOS_7.3",
+      "defaultValue": "Standard_F8",
       "allowedValues": [
-        "CentOS_7.3"
+        "Standard_F4",
+        "Standard_F8",
+        "Standard_F16"
       ],
       "metadata": {
-        "description": "The stock Marketplace image of the compute nodes"
+        "description": "sku to use for the NIS Server VM"
       }
     },
     "imageResourceGroup": {
@@ -130,7 +132,7 @@
     },
     "existingVNetName": {
       "type": "string",
-      "defaultValue": "POC-VirtualNetwork",
+      "defaultValue": "POC-Network",
       "metadata": {
         "description": "name of existing Virtual Network"
       }
@@ -155,9 +157,12 @@
     "vnetID": "[resourceId(parameters('existingVNetResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('existingVNetName'))]",
     "SubnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
     "NFSName": "NFS01",
+    "LoginName": "loginserver",
+    "LoginIPConfigName": "[concat(variables('loginName'), 'ipconfig')]",
     "NodeipConfigName": "[concat(parameters('ClusterPrefix'), 'ipconfig')]",
+    "LoginNicName": "[concat(variables('loginName'), 'nic')]",
     "NodenicName": "[concat(parameters('ClusterPrefix'), 'nic')]",
-    "computeNodeimageReference_stock": "[variables('Images')[parameters('computeNodeImage')]]",
+    "computeNodeimageReference_stock": "[variables('Images')['CentOS_7.3']]",
     "computeNodeimageReference_custom": {"id": "[resourceId(parameters('imageResourceGroup'), 'Microsoft.Compute/images', parameters('imageName'))]"},
     "computeNodeimageReference": "[variables(concat('computeNodeimageReference_',parameters('imageSelection')))]",
     "sshKeyPath": "[concat('/home/',parameters('adminUserName'),'/.ssh/authorized_keys')]",
@@ -183,22 +188,67 @@
     "linuxConfiguration_password": { },
     "linuxConfiguration": "[variables(concat('linuxConfiguration_',parameters('authenticationType')))]",
     
-    "storageAccountType": "Standard_LRS",
+    "storageAccountType": "Standard_LRS"
     
-    "NFSScripts": {
-      "scriptsToDownload": [
-        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/special/setup.sh"
-      ],
-      "commandToExecute": "[concat('bash setup.sh ', parameters('adminUserName'))]"
-    },
-    "clientScripts": {
-      "scriptsToDownload": [
-        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/special/client-setup.sh"
-      ],
-      "commandToExecute": "[concat('bash client-setup.sh ', variables('NFSName'))]"
-    }
   },  
   "resources": [
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('LoginNicName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2018-04-01",
+      "dependsOn": [ ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[variables('LoginIPConfigName')]",
+            "properties":  {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('SubnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('LoginName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2017-03-30",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkinterfaces/', variables('LoginNicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('LoginVMsku')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('LoginName')]",
+          "adminUsername": "[parameters('adminUserName')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "linuxConfiguration": "[variables('linuxConfiguration')]"
+        },
+        "storageProfile": {
+          "imageReference": "[variables('computeNodeimageReference')]",
+          "osDisk": {
+            "caching": "ReadOnly",
+            "createOption": "FromImage",
+             "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+             }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+               "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('LoginNicName'))]"
+            }
+          ]
+        }
+      }
+    },
     {
         "type": "Microsoft.Compute/virtualMachineScaleSets",
         "name": "[parameters('ClusterPrefix')]",
