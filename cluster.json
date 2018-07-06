@@ -96,7 +96,7 @@
       "metadata": {
         "description": "Number of VM instances for Compute Node Scaleset (100 or less)."
       },
-      "defaultValue": 64,
+      "defaultValue": 4,
       "maxValue": 100
     },
     "adminUserName": {
