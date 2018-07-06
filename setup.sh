@@ -76,11 +76,24 @@ setup_raid()
     mkdir -p /global/sge
     mkdir -p /global/cfadm
     mkdir -p /global/lsf
+
+    chmod 777 /global/projects
+    chmod 777 /global
+    chmod 777 /global/apps
+    chmod 777 /global/etc
+    chmod 777 /global/sge
+    chmod 777 /global/cfadm
+    chmod 777 /global/lsf
     
-    ln -s /global/projects /projects
-    ln -s /global/sge /sge
-    ln -s /global/cfadm /cfadm
-    ln -s /global/lsf /lsf
+    ln -s /global/projects /
+    ln -s /global/sge /
+    ln -s /global/cfadm /
+    ln -s /global/lsf /
+
+    chmod 777 /projects
+    chmod 777 /sge
+    chmod 777 /cfadm
+    chmod 777 /lsf
 
 }
 
@@ -103,15 +116,6 @@ mount_nfs()
     exportfs
 	exportfs -a
 	exportfs 
-    
-    chmod 777 /projects
-    chmod 777 /global
-    chmod 777 /global/apps
-    chmod 777 /global/etc
-    chmod 777 /sge
-    chmod 777 /cfadm
-    chmod 777 /lsf
-
     
     
 }
