@@ -6,10 +6,6 @@ ADMIN_USER=$1
 
 # Shares
 mkdir -p /global
-mkdir -p /projects
-mkdir -p /sge
-mkdir -p /cfadm
-mkdir -p /lsf
 
 BLACKLIST="/dev/sda|/dev/sdb"
 
