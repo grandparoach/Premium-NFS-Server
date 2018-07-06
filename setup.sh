@@ -5,9 +5,11 @@ set -x
 ADMIN_USER=$1
 
 # Shares
-NFS_DATA=/share/data
-mkdir -p $NFS_DATA
-
+mkdir -p /global
+mkdir -p /projects
+mkdir -p /sge
+mkdir -p /cfadm
+mkdir -p /lsf
 
 BLACKLIST="/dev/sda|/dev/sdb"
 
@@ -65,15 +67,34 @@ setup_raid()
     #echo "/dev/md0 $NFS_DATA xfs rw,noatime,attr2,inode64,nobarrier,sunit=1024,swidth=4096,nofail 0 2" >> /etc/fstab
     
     mkfs.ext4 /dev/md0
-    mount -o defaults /dev/md0 $NFS_DATA
-    echo "/dev/md0 $NFS_DATA ext4 defaults 0 2" >> /etc/fstab
+    mount -o defaults /dev/md0 /global
+    echo "/dev/md0 /global ext4 defaults 0 2" >> /etc/fstab
+
+    mkdir -p /global/projects
+    mkdir -p /global/apps
+    mkdir -p /global/etc
+    mkdir -p /global/sge
+    mkdir -p /global/cfadm
+    mkdir -p /global/lsf
     
+    ln /global/projects /projects
+    ln /global/sge /sge
+    ln /global/cfadm /cfadm
+    ln /global/lsf /lsf
+
 }
 
 mount_nfs()
 {
     
-    echo "$NFS_DATA    *(rw,async)" >> /etc/exports
+    echo "/projects   *(rw,async,no_root_squash)" >> /etc/exports
+    echo "/home   *(rw,async,no_root_squash)" >> /etc/exports
+    echo "/global/apps   *(rw,async,no_root_squash)" >> /etc/exports
+    echo "/global/etc   *(rw,async,no_root_squash)" >> /etc/exports
+    echo "/sge   *(rw,async,no_root_squash)" >> /etc/exports
+    echo "/cfadm   *(rw,async,no_root_squash)" >> /etc/exports
+    echo "/lsf   *(rw,async,no_root_squash)" >> /etc/exports
+
     systemctl enable rpcbind || echo "Already enabled"
     systemctl enable nfs-server || echo "Already enabled"
     systemctl start rpcbind || echo "Already enabled"
@@ -83,9 +104,15 @@ mount_nfs()
 	exportfs -a
 	exportfs 
     
-    cd $NFS_DATA
-    chown $ADMIN_USER:1000 .
-    chmod 777 .
+    chmod 777 /projects
+    chmod 777 /global
+    chmod 777 /global/apps
+    chmod 777 /global/etc
+    chmod 777 /sge
+    chmod 777 /cfadm
+    chmod 777 /lsf
+
+    
     
 }
 
