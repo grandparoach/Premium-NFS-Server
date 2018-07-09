@@ -187,8 +187,13 @@
       }
     },
     "linuxConfiguration_password": { },
-    "linuxConfiguration": "[variables(concat('linuxConfiguration_',parameters('authenticationType')))]"
-    
+    "linuxConfiguration": "[variables(concat('linuxConfiguration_',parameters('authenticationType')))]",
+    "vmScripts": {
+      "scriptsToDownload": [
+        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/special/client-setup.sh"
+      ],
+      "commandToExecute": "[concat('bash cn-setup.sh ')]"
+    }
   },  
   "resources": [
     {
@@ -314,6 +319,23 @@
                   "storageAccountType": "Standard_LRS"
               }
             }
+          },
+          "extensionProfile": {
+            "extensions": [
+              {
+                "name": "PostInstallScript",
+                "properties": {
+                  "publisher": "Microsoft.Azure.Extensions",
+                  "type": "CustomScript",
+                  "typeHandlerVersion": "2.0",
+                  "autoUpgradeMinorVersion": true,
+                  "settings": {
+                    "fileUris": "[variables('vmScripts').scriptsToDownload]",
+                    "commandToExecute": "[variables('vmScripts').commandToExecute]"
+                  }
+                }
+              }
+            ]
           }
         }
       }
