@@ -1,4 +1,4 @@
-# Premium-NFS-Server
+# LSeries-NFS-Server
 Template for Deploying an NFS Server with LSeries - nvme disks and Accelerated Networking.
 
 You must specify an existing VNet/Subnet for it to attach to.
