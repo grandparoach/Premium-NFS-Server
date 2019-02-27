@@ -42,9 +42,7 @@ setup_raid()
 
 mount_nfs()
 {
-    #increase the NFS threads to 80
-    sed -i 's/RPCNFSDCOUNT=8/RPCNFSDCOUNT=80/' /etc/init.d/nfs-kernel-server
-    sed -i 's/RPCNFSDCOUNT=8/RPCNFSDCOUNT=80/' /etc/default/nfs-kernel-server
+    
 
     echo "$NFS_DATA    *(rw,async,no_root_squash)" >> /etc/exports
     systemctl enable rpcbind || echo "Already enabled"
@@ -55,6 +53,14 @@ mount_nfs()
     exportfs
 	exportfs -a
 	exportfs 
+
+    #increase the NFS threads to 80
+    sed -i 's/RPCNFSDCOUNT=8/RPCNFSDCOUNT=80/' /etc/init.d/nfs-kernel-server
+    sed -i 's/RPCNFSDCOUNT=8/RPCNFSDCOUNT=80/' /etc/default/nfs-kernel-server
+    systemctl stop nfs-server 
+    systemctl start nfs-server 
+
+
 }
 
 #systemctl stop firewalld
