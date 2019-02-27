@@ -2,47 +2,25 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "vmPrefix": {
+    "vmName": {
       "type": "string",
       "metadata": {
-        "description": "Base string for naming resources (max length of 8)"
+        "description": "VM Name"
       },
       "maxLength": 8
     },
-    "MasterVMsku": {
+    "VMsku": {
       "type": "string",
-      "defaultValue": "Standard_F16s_v2",
+      "defaultValue": "Standard_L80s_v2",
       "allowedValues": [
-        "Standard_DS3_v2",
-        "Standard_DS4_v2",
-        "Standard_DS5_v2",
-        "Standard_DS11_v2",
-        "Standard_DS12_v2",
-        "Standard_DS13_v2",
-        "Standard_DS14_v2",
-        "Standard_DS15_v2",
-        "Standard_F8s_v2",
-        "Standard_D8s_v3",
-        "Standard_D16s_v3",
-        "Standard_D32s_v3",
-        "Standard_D64s_v3",
-        "Standard_F16s_v2",
-        "Standard_F32s_v2",
-        "Standard_F64s_v2"
+        "Standard_L8s_v2",
+        "Standard_L16s_v2",
+        "Standard_L32s_v2",
+        "Standard_L64s_v2",
+        "Standard_L80s_v2"
       ],
       "metadata": {
-        "description": "sku to use for the master VM"
-      }
-    },
-    "masterImage": {
-      "type": "string",
-      "defaultValue": "CentOS_7.4",
-      "allowedValues": [
-        "CentOS_7.4",
-        "RHEL_7.4"
-      ],
-      "metadata": {
-        "description": "The VM image of the master nodes"
+        "description": "sku to use"
       }
     },
     "adminUserName": {
@@ -76,21 +54,6 @@
         "description": "SSH public key that will be included on all nodes. The OpenSSH public key can be generated with tools like ssh-keygen on Linux or OS X."
       }
     },
-    "dataDiskSize": {
-      "type": "int",
-      "defaultValue": 128,
-      "metadata": {
-        "description": "The size in GB of each of the data disks that are attached to the VM.  A RAID-0 volume is created with all data disks that is dataDiskSize * dataDiskCount in size."
-      }
-    },
-    "nbDataDisks": {
-      "type": "int",
-      "defaultValue": 8,
-      "maxValue": 16,
-      "metadata": {
-        "description": "The number of disks to attach to the NFS server."
-      }
-    },
     "existingVNetName": {
       "type": "string",
       "defaultValue": "",
@@ -115,30 +78,14 @@
   },
   "variables": {
     "location": "[resourceGroup().location]",
-    "longNamingInfix": "[toLower(parameters('vmPrefix'))]",
+    "longNamingInfix": "[toLower(parameters('vmName'))]",
     "newStorageAccountSuffix": "[concat(variables('longNamingInfix'), 'sa')]",
     "vnetID": "[resourceId(parameters('existingVNetResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('existingVNetName'))]",
     "SubnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-    "masterBoxName": "[concat(variables('longNamingInfix'), 'master')]",
     "DiagSAName": "[concat(uniqueString(concat(resourceGroup().id, variables('newStorageAccountSuffix'), 'masterboxsadiag')), 'diag')]",
-    "MasterIPConfigName": "[concat(variables('masterBoxName'), 'ipconfig')]",
-    "MasterNicName": "[concat(variables('masterBoxName'), 'nic')]",
-    "MasterimageReference": "[variables('computeImages')[parameters('masterImage')]]",
+    "IPConfigName": "[concat(parameters('vmName'), '-ipconfig')]",
+    "NicName": "[concat(parameters('vmName'), '-nic')]",
     "sshKeyPath": "[concat('/home/',parameters('adminUserName'),'/.ssh/authorized_keys')]",
-    "computeImages": {
-      "CentOS_7.4": {
-        "publisher": "OpenLogic",
-        "offer": "CentOS",
-        "sku": "7.4",
-        "version": "latest"
-      },
-      "RHEL_7.4": {
-        "publisher": "RedHat",
-        "offer": "RHEL",
-        "sku": "7.4",
-        "version": "latest"
-      }
-    },
     "linuxConfiguration_sshPublicKey": {
       "disablePasswordAuthentication": "true",
       "ssh": {
@@ -157,10 +104,11 @@
     
     "mastervmScripts": {
       "scriptsToDownload": [
-        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/master/setup.sh"
+        "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/LSeries/setup.sh"
       ],
       "commandToExecute": "bash setup.sh"
     }
+
   },  
   "resources": [
     {
@@ -174,14 +122,14 @@
     },
     {
       "type": "Microsoft.Network/networkInterfaces",
-      "name": "[variables('MasterNicName')]",
+      "name": "[variables('NicName')]",
       "location": "[variables('location')]",
-      "apiVersion": "2018-04-01",
+      "apiVersion": "2018-10-01",
       "dependsOn": [ ],
       "properties": {
         "ipConfigurations": [
           {
-            "name": "[variables('MasterIPConfigName')]",
+            "name": "[variables('IPConfigName')]",
             "properties":  {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
@@ -195,49 +143,44 @@
     },
     {
       "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('masterBoxName')]",
+      "name": "[parameters('vmName')]",
       "location": "[variables('location')]",
-      "apiVersion": "2017-03-30",
+      "apiVersion": "2018-10-01",
       "dependsOn": [
-        "[concat('Microsoft.Network/networkinterfaces/', variables('MasterNicName'))]",
+        "[concat('Microsoft.Network/networkinterfaces/', variables('NicName'))]",
         "[concat('Microsoft.Storage/storageAccounts/', variables('DiagSAName'))]"
       ],
       "properties": {
         "hardwareProfile": {
-          "vmSize": "[parameters('MasterVMsku')]"
+          "vmSize": "[parameters('VMsku')]"
         },
         "osProfile": {
-          "computerName": "[variables('masterBoxName')]",
+          "computerName": "[parameters('vmName')]",
           "adminUsername": "[parameters('adminUserName')]",
           "adminPassword": "[parameters('adminPassword')]",
           "linuxConfiguration": "[variables('linuxConfiguration')]"
         },
         "storageProfile": {
-          "imageReference": "[variables('MasterimageReference')]",
+            "imageReference": {
+                "publisher": "Canonical",
+                "offer": "UbuntuServer",
+                "sku": "18.04-LTS",
+                "version": "latest"
+            },
           "osDisk": {
             "caching": "ReadOnly",
             "createOption": "FromImage",
              "managedDisk": {
                 "storageAccountType": "Premium_LRS"
-             }
+             },
+             "diskSizeGB": 30 
           },
-
-          "copy": [{
-            "name": "dataDisks",
-            "count": "[parameters('nbDataDisks')]",
-            "input": {
-                "lun": "[copyIndex('dataDisks')]",
-                "createOption": "Empty",
-                "diskSizeGB": "[parameters('datadiskSize')]"
-            }
-        }]
-
-         
+          "dataDisks": []  
         },
         "networkProfile": {
           "networkInterfaces": [
             {
-               "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('MasterNicName'))]"
+               "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('NicName'))]"
             }
           ]
         },
@@ -251,11 +194,11 @@
     },     
     {
       "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat(variables('masterBoxName'), '/ext')]",
+      "name": "[concat(parameters('vmName'), '/ext')]",
       "apiVersion": "2015-06-15",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', variables('masterBoxName'))]"
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
       ],
       "properties": {
         "publisher": "Microsoft.Azure.Extensions",
