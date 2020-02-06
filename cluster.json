@@ -197,7 +197,7 @@
       "scriptsToDownload": [
         "https://raw.githubusercontent.com/grandparoach/Premium-NFS-Server/special/client-setup.sh"
       ],
-      "commandToExecute": "[concat('bash cn-setup.sh ')]"
+      "commandToExecute": "[concat('bash client-setup.sh ')]"
     }
   },  
   "resources": [
