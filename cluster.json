@@ -15,9 +15,10 @@
       "allowedValues": [
         "Standard_HB60rs",
         "Standard_HC44rs",
-        "Standard_E64as_v4",
         "Standard_E48s_v4",
         "Standard_E48as_v4",
+        "Standard_E64s_v4",
+        "Standard_E64as_v4",
         "Standard_A8",
         "Standard_A9",
         "Standard_D2_v2",
