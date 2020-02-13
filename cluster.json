@@ -277,7 +277,7 @@
         "type": "Microsoft.Compute/virtualMachineScaleSets",
         "name": "[parameters('ClusterPrefix')]",
         "location": "[variables('location')]",
-        "apiVersion": "2017-12-01",
+        "apiVersion": "2019-07-01",
         "sku": {
           "name": "[parameters('CompNodeVMsku')]",
           "tier": "Standard",
@@ -285,10 +285,11 @@
         },
         "dependsOn": [ ],
         "properties": {
-          "overprovision": "false",
+          "overprovision": "true",
           "upgradePolicy": {
-            "mode": "Manual"
+             "mode": "Manual"
           },
+          "singlePlacementGroup": "false",
           "virtualMachineProfile": {
             "networkProfile": {
               "networkInterfaceConfigurations": [
