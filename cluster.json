@@ -11,8 +11,9 @@
     },
     "CompNodeVMsku": {
       "type": "string",
-      "defaultValue": "Standard_H16m",
+      "defaultValue": "Standard_E2s_v3",
       "allowedValues": [
+        "Standard_E2s_v3",
         "Standard_HB60rs",
         "Standard_HC44rs",
         "Standard_E48s_v4",
