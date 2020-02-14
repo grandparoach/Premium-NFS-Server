@@ -103,7 +103,7 @@
         "description": "Number of VM instances for Compute Node Scaleset (100 or less)."
       },
       "defaultValue": 64,
-      "maxValue": 100
+      "maxValue": 500
     },
     "adminUserName": {
       "type": "string",
